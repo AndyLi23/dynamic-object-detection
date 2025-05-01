@@ -1,0 +1,27 @@
+# KMD demo configuration file
+# required environment variables:
+#   KMD: path to the KMD directory
+#   ROBOT: name of the robot (e.g. 'thoth')
+
+time:
+  relative: true
+  t0: 30
+  tf: 60
+
+img_data:
+  path: "${KMD}/bags/${ROBOT}.bag"
+  topic: /${ROBOT}/forward/color/image_raw/compressed
+  camera_info_topic: /${ROBOT}/forward/color/camera_info
+  compressed: True
+  
+depth_data:
+  path: "${KMD}/bags/${ROBOT}.bag"
+  topic: /${ROBOT}/forward/depth/image_rect_raw
+  camera_info_topic: /${ROBOT}/forward/depth/camera_info
+  compressed: False
+
+pose_data:
+  type: bag
+  path: ${KMD}/kimera_vio/${ROBOT}.bag
+  topic: /${ROBOT}/kimera_vio_ros/odometry
+  time_tol: 0.5

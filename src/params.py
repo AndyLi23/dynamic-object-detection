@@ -1,0 +1,157 @@
+import yaml
+from dataclasses import dataclass
+import numpy as np
+from os.path import expanduser, expandvars
+from robotdatapy.data import PoseData, ImgData
+from functools import cached_property
+from typing import Tuple
+
+def find_transformation(bag_path, param_dict) -> np.array:
+    """
+    Converts a transform parameter dictionary into a transformation matrix.
+
+    Returns:
+        np.array: Transformation matrix.
+    """
+    if param_dict['input_type'] == 'tf':
+        bag_path = expandvars_recursive(bag_path)
+        T = PoseData.any_static_tf_from_bag(
+            expandvars_recursive(bag_path), 
+            expandvars_recursive(param_dict['parent']), 
+            expandvars_recursive(param_dict['child'])
+        )
+        if 'inv' in param_dict.keys() and param_dict['inv']:
+            T = np.linalg.inv(T)
+        return T
+    elif param_dict['input_type'] == 'matrix':
+        return np.array(param_dict['matrix']).reshape((4, 4))
+    else:
+        raise ValueError("Invalid input type.")
+
+def expandvars_recursive(path):
+    """Recursively expands environment variables in the given path."""
+    while True:
+        expanded_path = expandvars(path)
+        if expanded_path == path:
+            return expanduser(expanded_path)
+        path = expanded_path
+
+@dataclass
+class ImgDataParams:
+    
+    path: str
+    topic: str
+    camera_info_topic: str
+    time_tol: float = float('inf')
+    compressed: bool = True
+    compressed_rvl: bool = False
+    
+    @classmethod
+    def from_dict(cls, params_dict: dict):
+        return cls(**params_dict)
+
+@dataclass
+class PoseDataParams:
+    
+    params_dict: dict
+    T_odom_camera: np.array
+    
+    @classmethod
+    def from_dict(cls, params_dict: dict):
+        params_dict_subset = {k: v for k, v in params_dict.items() 
+                       if k != 'T_odom_camera'}
+        T_odom_camera_dict = params_dict['T_odom_camera'] \
+            if 'T_odom_camera' in params_dict else None
+        T_odom_camera = find_transformation(params_dict_subset['path'], T_odom_camera_dict) if T_odom_camera_dict is not None else np.eye(4)
+        return cls(params_dict=params_dict_subset,
+                   T_odom_camera=T_odom_camera)
+        
+    def load_camera_pose_data(self, extra_key_vals: dict) -> PoseData:
+        params_dict = {k: v for k, v in self.params_dict.items()}
+        for k, v in extra_key_vals.items():
+            params_dict[k] = v
+            
+        for k, v in params_dict.items():
+            if type(v) == str:
+                params_dict[k] = expandvars_recursive(v)
+        pose_data = PoseData.from_dict(params_dict)
+        return pose_data
+    
+    def _find_transformation(self, tf_dict) -> np.array:
+        return find_transformation(self.params_dict["path"], tf_dict)
+
+@dataclass
+class Params:
+
+    img_data_params: ImgDataParams
+    depth_data_params: ImgDataParams
+    pose_data_params: PoseDataParams
+    time_params: dict = None
+
+    @classmethod
+    def from_yaml(cls, path: str):
+        try:
+            with open(path, 'r') as fin:
+                params = yaml.safe_load(fin)
+        except: params = {}
+        return cls(
+            img_data_params=ImgDataParams.from_dict(params['img_data']),
+            depth_data_params=ImgDataParams.from_dict(params['depth_data']),
+            pose_data_params=PoseDataParams.from_dict(params['pose_data']),
+            time_params=params['time'] if 'time' in params else None,
+        )
+    
+    @property
+    def time_range(self) -> Tuple[float, float]|None:
+        return self._extract_time_range()
+    
+    def load_camera_pose_data(self) -> PoseData:
+        extra_key_vals={'T_postmultiply': self.pose_data_params.T_odom_camera, 'interp': True}
+        return self.pose_data_params.load_camera_pose_data(extra_key_vals)
+    
+    def load_img_data(self) -> ImgData:
+        return self._load_img_data(color=True)
+    
+    def load_depth_data(self) -> ImgData:
+        return self._load_img_data(color=False)
+
+    def _extract_time_range(self) -> Tuple[float, float]:
+        if self.time_params is not None:
+            if 'relative' in self.time_params and self.time_params['relative']:
+                topic_t0 = self.data_t0
+                time_range = [topic_t0 + self.time_params['t0'], 
+                                topic_t0 + self.time_params['tf']]
+            else:
+                time_range = [self.time_params['t0'], 
+                                self.time_params['tf']]
+        else:
+            time_range = None
+        return time_range
+    
+    def _load_img_data(self, color=True) -> ImgData:
+        img_data_params = self.img_data_params if color else self.depth_data_params
+        
+        img_file_path = expandvars_recursive(img_data_params.path)
+        img_data = ImgData.from_bag(
+            path=img_file_path,
+            topic=expandvars_recursive(img_data_params.topic),
+            time_tol=img_data_params.time_tol,
+            time_range=self.time_range,
+            compressed=img_data_params.compressed,
+            compressed_rvl=img_data_params.compressed_rvl,
+        )
+        img_data.extract_params(expandvars_recursive(img_data_params.camera_info_topic))
+        return img_data
+    
+    @cached_property
+    def data_t0(self) -> float:
+        return self.data_t_range[0]
+    
+    @cached_property
+    def data_tf(self) -> float:
+        return self.data_t_range[1]
+    
+    @cached_property
+    def data_t_range(self) -> float:
+        return ImgData.topic_t_range(expandvars_recursive(self.img_data_params.path), 
+                                     expandvars_recursive(self.img_data_params.topic))
