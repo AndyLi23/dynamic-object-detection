@@ -6,7 +6,7 @@ import numpy as np
 
 class RaftWrapper:
     def __init__(self, raft_params: RaftParams):
-        self.raft_params = raft_params
+        self.raft_params = raft_params        
         self._load_raft()
 
         self.transforms = T.Compose(

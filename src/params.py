@@ -49,6 +49,11 @@ class ImgDataParams:
     @classmethod
     def from_dict(cls, params_dict: dict):
         return cls(**params_dict)
+    
+@dataclass
+class DepthDataParams(ImgDataParams):
+    depth_scale: float = 1000.0
+    max_depth: float = None
 
 @dataclass
 class PoseDataParams:
@@ -100,6 +105,7 @@ class RaftParams:
     raft_args: RaftArgs
     iters: int = 12
     device: str = 'cuda'
+    batch_size: int = 24
 
     def __post_init__(self):
         self.path = expandvars_recursive(self.path)
@@ -114,10 +120,12 @@ class RaftParams:
 class Params:
 
     img_data_params: ImgDataParams
-    depth_data_params: ImgDataParams
+    depth_data_params: DepthDataParams
     pose_data_params: PoseDataParams
     raft_params: RaftParams
-    time_params: dict = None
+    time_params: dict
+    device: str
+    batch_size: int
 
     @classmethod
     def from_yaml(cls, path: str):
@@ -125,13 +133,15 @@ class Params:
             params = yaml.safe_load(fin)
         return cls(
             img_data_params=ImgDataParams.from_dict(params['img_data']),
-            depth_data_params=ImgDataParams.from_dict(params['depth_data']),
+            depth_data_params=DepthDataParams.from_dict(params['depth_data']),
             pose_data_params=PoseDataParams.from_dict(params['pose_data']),
             raft_params=RaftParams.from_dict(params['raft']),
             time_params=params['time'] if 'time' in params else None,
+            device=params['device'] if 'device' in params else 'cuda',
+            batch_size=params['batch_size'] if 'batch_size' in params else 24,
         )
     
-    @property
+    @cached_property
     def time_range(self) -> Tuple[float, float]|None:
         return self._extract_time_range()
     

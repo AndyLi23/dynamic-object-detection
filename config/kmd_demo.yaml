@@ -5,11 +5,16 @@
 #   RAFT: path to root of RAFT repository
 #   RAFT_MODEL: name of the RAFT model (e.g. 'raft-sintel')
 
+# device/batch size for geometric optical flow
+device: cuda
+batch_size: 24
+
 raft:
   path: ${RAFT}/core/
   model: ${RAFT}/models/${RAFT_MODEL}.pth
   iters: 12
   device: cuda
+  batch_size: 24
 
 time:
   relative: true
@@ -27,6 +32,8 @@ depth_data:
   topic: /${ROBOT}/forward/depth/image_rect_raw
   camera_info_topic: /${ROBOT}/forward/depth/camera_info
   compressed: False
+  depth_scale: 1000.0
+  max_depth: 10.0
 
 pose_data:
   type: bag

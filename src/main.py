@@ -2,6 +2,8 @@ import argparse
 from params import Params
 from raft_wrapper import RaftWrapper
 from viz import viz_optical_flow
+from flow import GeometricOpticalFlow
+import numpy as np
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -30,6 +32,18 @@ if __name__ == '__main__':
 
     print(f'running algorithm on {N_frames} frames from t={times[0]} to t={times[-1]}')
 
-    out = raft.run_raft(imgs[0:1], imgs[1:2]) # batched
+    raft_flow = raft.run_raft(imgs[0:params.raft_params.batch_size], imgs[1:params.raft_params.batch_size + 1]) # batched
     
-    viz_optical_flow(out[0])
+    viz_optical_flow(raft_flow[0])
+
+
+    gof = GeometricOpticalFlow(params.depth_data_params, depth_data.camera_params, device=params.device)
+
+    flow = gof.compute_optical_flow_batch(depth_imgs[0:params.batch_size], cam_poses[0:params.batch_size + 1]) # batched
+
+    viz_optical_flow(flow[0])
+
+    nobatch_flow = gof.compute_optical_flow(depth_imgs[0], *cam_poses[0:2]) # no batch
+
+    viz_optical_flow(nobatch_flow)
+    
