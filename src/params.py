@@ -81,11 +81,42 @@ class PoseDataParams:
         return find_transformation(self.params_dict["path"], tf_dict)
 
 @dataclass
+class RaftArgs:
+    small: bool = False
+    mixed_precision: bool = False
+    alternate_corr: bool = False
+
+    @classmethod
+    def from_dict(cls, args_dict):
+        return cls(**args_dict)
+    
+    def __iter__(self):
+        return iter(self.__dict__.items())
+    
+@dataclass
+class RaftParams:
+    path: str
+    model: str
+    raft_args: RaftArgs
+    iters: int = 12
+    device: str = 'cuda'
+
+    def __post_init__(self):
+        self.path = expandvars_recursive(self.path)
+        self.model = expandvars_recursive(self.model)
+
+    @classmethod
+    def from_dict(cls, params_dict):
+        params_dict['raft_args'] = RaftArgs.from_dict(params_dict['raft_args']) if 'raft_args' in params_dict else RaftArgs()
+        return cls(**params_dict)
+
+@dataclass
 class Params:
 
     img_data_params: ImgDataParams
     depth_data_params: ImgDataParams
     pose_data_params: PoseDataParams
+    raft_params: RaftParams
     time_params: dict = None
 
     @classmethod
@@ -96,6 +127,7 @@ class Params:
             img_data_params=ImgDataParams.from_dict(params['img_data']),
             depth_data_params=ImgDataParams.from_dict(params['depth_data']),
             pose_data_params=PoseDataParams.from_dict(params['pose_data']),
+            raft_params=RaftParams.from_dict(params['raft']),
             time_params=params['time'] if 'time' in params else None,
         )
     

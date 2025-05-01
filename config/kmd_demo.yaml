@@ -2,6 +2,14 @@
 # required environment variables:
 #   KMD: path to the KMD directory
 #   ROBOT: name of the robot (e.g. 'thoth')
+#   RAFT: path to root of RAFT repository
+#   RAFT_MODEL: name of the RAFT model (e.g. 'raft-sintel')
+
+raft:
+  path: ${RAFT}/core/
+  model: ${RAFT}/models/${RAFT_MODEL}.pth
+  iters: 12
+  device: cuda
 
 time:
   relative: true
