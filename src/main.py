@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     times = img_data.times
     N_frames = len(times)
-    imgs = img_data.imgs
+    imgs = [img_data.img(t) for t in times]
     depth_imgs = [depth_data.img(t) for t in times]
     cam_poses = [cam_pose_data.pose(t) for t in times]
 

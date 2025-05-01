@@ -90,10 +90,8 @@ class Params:
 
     @classmethod
     def from_yaml(cls, path: str):
-        try:
-            with open(path, 'r') as fin:
-                params = yaml.safe_load(fin)
-        except: params = {}
+        with open(path, 'r') as fin:
+            params = yaml.safe_load(fin)
         return cls(
             img_data_params=ImgDataParams.from_dict(params['img_data']),
             depth_data_params=ImgDataParams.from_dict(params['depth_data']),
