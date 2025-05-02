@@ -16,5 +16,7 @@ with Kimera-Multi outdoor thoth:
 ```
 export $KMD=/path/to/kimera/outdoor/data
 export $ROBOT=thoth
+export RAFT=/path/to/RAFT/
+export RAFT_MODEL=raft-kitti
 python3 src/main.py --params config/kmd_demo.yaml
 ```

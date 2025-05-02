@@ -145,6 +145,7 @@ class GeometricOpticalFlow:
 
         return magnitude_diff[..., 0], norm_magnitude_diff[..., 0], angle_diff[..., 0]  # (N, H, W) x 3
     
+    @torch.no_grad()
     def compute_batched_flow_difference_torch(self, raft_batch, geometric_batch):
         raft_batch = torch.Tensor(raft_batch).to(self.device)                                             # (N, H, W, 2)
         geometric_batch = torch.Tensor(geometric_batch).to(self.device)                                   # (N, H, W, 2)
@@ -154,7 +155,6 @@ class GeometricOpticalFlow:
         magnitude_diff, norm_magnitude_diff, angle_diff = (torch.zeros((*flow_diff.shape[:-1], 1), dtype=torch.float32, device=self.device) for _ in range(3))   # (N, H, W, 1) x 2
         
         magnitude_diff[~valid_mask] = torch.nan
-        norm_magnitude_diff[~valid_mask] = torch.nan
         angle_diff[~valid_mask] = torch.nan
         magnitude_diff[valid_mask], angle_diff[valid_mask] = torch.sqrt(flow_diff[..., 0][valid_mask]**2 + flow_diff[..., 1][valid_mask]**2).view(-1, 1), \
                                                              (torch.atan2(flow_diff[..., 1][valid_mask], flow_diff[..., 0][valid_mask]) + torch.pi).view(-1, 1)

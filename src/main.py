@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     print('computing optical flow difference...')
 
-    magnitude_diff_batch, norm_magnitude_diff_batch, angle_diff_batch = gof.compute_batched_flow_difference_torch(raft_flows, gof_flows)
+    magnitude_diff_batch, norm_magnitude_diff_batch, angle_diff_batch = gof.compute_batched_flow_difference(raft_flows, gof_flows)
 
     viz_optical_flow_diff_batch(N=N_frames - 1, 
                                 geometric_flow_batch=gof_flows, 
