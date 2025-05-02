@@ -56,7 +56,8 @@ class GeometricOpticalFlow:
 
         # compute flow for each pixel in original frame
         flow = np.zeros((self.H, self.W, 2), dtype=np.float32)                                  # (H, W, 2) 
-        flow[valid_mask] = projected_pixel_coords_flattened_valid - pixel_coords_flattened_valid                
+        flow[valid_mask] = projected_pixel_coords_flattened_valid - pixel_coords_flattened_valid  
+        flow[~valid_mask] = np.nan
 
         return flow
 
@@ -131,6 +132,37 @@ class GeometricOpticalFlow:
         flow[invalid_mask] = np.nan
 
         return flow
+    
+    def compute_batched_flow_difference(self, raft_batch, geometric_batch):
+        flow_diff = raft_batch - geometric_batch                                                            # (N, H, W, 2)
+        valid_mask = ~np.isnan(flow_diff[..., 0]) & ~np.isnan(flow_diff[..., 1])                            # (N, H, W)
+        magnitude_diff, angle_diff = np.zeros((*flow_diff.shape[:-1], 1), dtype=np.float32), np.zeros((*flow_diff.shape[:-1], 1), dtype=np.float32)   # (N, H, W, 1) x 2
+        magnitude_diff[valid_mask], angle_diff[valid_mask] = cv.cartToPolar(flow_diff[..., 0][valid_mask], flow_diff[..., 1][valid_mask])
+
+        magnitude_diff[~valid_mask] = np.nan
+        angle_diff[~valid_mask] = np.nan
+        norm_magnitude_diff = magnitude_diff / np.linalg.norm(geometric_batch, axis=-1, keepdims=True)  # (N, H, W, 1)
+
+        return magnitude_diff[..., 0], norm_magnitude_diff[..., 0], angle_diff[..., 0]  # (N, H, W) x 3
+    
+    def compute_batched_flow_difference_torch(self, raft_batch, geometric_batch):
+        raft_batch = torch.Tensor(raft_batch).to(self.device)                                             # (N, H, W, 2)
+        geometric_batch = torch.Tensor(geometric_batch).to(self.device)                                   # (N, H, W, 2)
+
+        flow_diff = raft_batch - geometric_batch                                                          # (N, H, W, 2)
+        valid_mask = ~torch.isnan(flow_diff[..., 0]) & ~torch.isnan(flow_diff[..., 1])                    # (N, H, W)
+        magnitude_diff, norm_magnitude_diff, angle_diff = (torch.zeros((*flow_diff.shape[:-1], 1), dtype=torch.float32, device=self.device) for _ in range(3))   # (N, H, W, 1) x 2
+        
+        magnitude_diff[~valid_mask] = torch.nan
+        norm_magnitude_diff[~valid_mask] = torch.nan
+        angle_diff[~valid_mask] = torch.nan
+        magnitude_diff[valid_mask], angle_diff[valid_mask] = torch.sqrt(flow_diff[..., 0][valid_mask]**2 + flow_diff[..., 1][valid_mask]**2).view(-1, 1), \
+                                                             (torch.atan2(flow_diff[..., 1][valid_mask], flow_diff[..., 0][valid_mask]) + torch.pi).view(-1, 1)
+
+        norm_magnitude_diff = magnitude_diff / torch.linalg.norm(geometric_batch, dim=-1, keepdim=True)  # (N, H, W, 1)
+
+        return tuple(ret[..., 0].cpu().numpy() for ret in (magnitude_diff, norm_magnitude_diff, angle_diff))  # (N, H, W) x 3
+
 
 
 

@@ -9,6 +9,12 @@
 device: cuda
 batch_size: 24
 
+# run once every 15 frames
+original_fps: 30
+skip_frames: 2
+
+output: 'optical_flow_diff_skip_2'
+
 raft:
   path: ${RAFT}/core/
   model: ${RAFT}/models/${RAFT_MODEL}.pth
@@ -19,7 +25,7 @@ raft:
 time:
   relative: true
   t0: 30
-  tf: 60
+  tf: 90
 
 img_data:
   path: "${KMD}/bags/${ROBOT}.bag"
@@ -33,7 +39,7 @@ depth_data:
   camera_info_topic: /${ROBOT}/forward/depth/camera_info
   compressed: False
   depth_scale: 1000.0
-  max_depth: 10.0
+  max_depth: 30.0
 
 pose_data:
   type: bag

@@ -126,6 +126,9 @@ class Params:
     time_params: dict
     device: str
     batch_size: int
+    original_fps: int
+    skip_frames: int
+    output: str
 
     @classmethod
     def from_yaml(cls, path: str):
@@ -139,6 +142,9 @@ class Params:
             time_params=params['time'] if 'time' in params else None,
             device=params['device'] if 'device' in params else 'cuda',
             batch_size=params['batch_size'] if 'batch_size' in params else 24,
+            original_fps=params['original_fps'] if 'original_fps' in params else 30,
+            skip_frames=params['skip_frames'] if 'skip_frames' in params else 1,
+            output=params['output'] if 'output' in params else 'output',
         )
     
     @cached_property

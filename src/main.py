@@ -1,9 +1,10 @@
 import argparse
 from params import Params
 from raft_wrapper import RaftWrapper
-from viz import viz_optical_flow
+from viz import viz_optical_flow_diff_batch
 from flow import GeometricOpticalFlow
 import numpy as np
+from tqdm import tqdm
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -30,20 +31,53 @@ if __name__ == '__main__':
     depth_imgs = [depth_data.img(t) for t in times]
     cam_poses = [cam_pose_data.pose(t) for t in times]
 
+    skip = params.skip_frames
+
+    imgs = imgs[::skip]
+    depth_imgs = depth_imgs[::skip]
+    cam_poses = cam_poses[::skip]
+    times = times[::skip]
+    N_frames = len(times)
+
     print(f'running algorithm on {N_frames} frames from t={times[0]} to t={times[-1]}')
 
-    raft_flow = raft.run_raft(imgs[0:params.raft_params.batch_size], imgs[1:params.raft_params.batch_size + 1]) # batched
-    
-    viz_optical_flow(raft_flow[0])
+    raft_flows = []
 
+    print('computing raft optical flow...')
+
+    for index in tqdm(range(0, N_frames - 1, params.raft_params.batch_size)):
+        batch_end = min(index + params.raft_params.batch_size, N_frames - 1)
+        batch_imgs = imgs[index:batch_end]
+        batch_next_imgs = imgs[index + 1:batch_end + 1]
+
+        raft_flows.append(raft.run_raft(batch_imgs, batch_next_imgs))
 
     gof = GeometricOpticalFlow(params.depth_data_params, depth_data.camera_params, device=params.device)
 
-    flow = gof.compute_optical_flow_batch(depth_imgs[0:params.batch_size], cam_poses[0:params.batch_size + 1]) # batched
+    gof_flows = []
 
-    viz_optical_flow(flow[0])
+    print('computing geometric optical flow...')
 
-    nobatch_flow = gof.compute_optical_flow(depth_imgs[0], *cam_poses[0:2]) # no batch
+    for index in tqdm(range(0, N_frames - 1, params.batch_size)):
+        batch_end = min(index + params.batch_size, N_frames - 1)
+        batch_depth_imgs = depth_imgs[index:batch_end]
+        batch_cam_poses = cam_poses[index:batch_end + 1]
 
-    viz_optical_flow(nobatch_flow)
-    
+        gof_flows.append(gof.compute_optical_flow_batch(batch_depth_imgs, batch_cam_poses))
+
+    raft_flows = np.concatenate(raft_flows, axis=0)
+    gof_flows = np.concatenate(gof_flows, axis=0)
+
+    print('computing optical flow difference...')
+
+    magnitude_diff_batch, norm_magnitude_diff_batch, angle_diff_batch = gof.compute_batched_flow_difference_torch(raft_flows, gof_flows)
+
+    viz_optical_flow_diff_batch(N=N_frames - 1, 
+                                geometric_flow_batch=gof_flows, 
+                                raft_flow_batch=raft_flows, 
+                                image_batch=imgs[:-1], 
+                                magnitude_diff_batch=magnitude_diff_batch, 
+                                norm_magnitude_diff_batch=norm_magnitude_diff_batch, 
+                                angle_diff_batch=angle_diff_batch, 
+                                fps=params.original_fps / params.skip_frames,
+                                output=f'{params.output}.avi')
