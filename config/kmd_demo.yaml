@@ -20,7 +20,7 @@ raft:
   model: ${RAFT}/models/${RAFT_MODEL}.pth
   iters: 12
   device: cuda
-  batch_size: 24
+  batch_size: 36
 
 time:
   relative: true

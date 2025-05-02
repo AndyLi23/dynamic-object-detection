@@ -70,7 +70,18 @@ if __name__ == '__main__':
 
     print('computing optical flow difference...')
 
-    magnitude_diff_batch, norm_magnitude_diff_batch, angle_diff_batch = gof.compute_batched_flow_difference(raft_flows, gof_flows)
+    flow_differences = []
+    for index in tqdm(range(0, len(raft_flows), params.batch_size)):
+        batch_end = min(index + params.batch_size, N_frames - 1)
+        batch_raft_flows = raft_flows[index:batch_end]
+        batch_gof_flows = gof_flows[index:batch_end]
+        flow_differences.append(gof.compute_batched_flow_difference_torch(batch_raft_flows, batch_gof_flows))
+        
+    magnitude_diff_batch, norm_magnitude_diff_batch, angle_diff_batch = zip(*flow_differences)
+
+    magnitude_diff_batch = np.concatenate(magnitude_diff_batch, axis=0)
+    norm_magnitude_diff_batch = np.concatenate(norm_magnitude_diff_batch, axis=0)
+    angle_diff_batch = np.concatenate(angle_diff_batch, axis=0)
 
     viz_optical_flow_diff_batch(N=N_frames - 1, 
                                 geometric_flow_batch=gof_flows, 

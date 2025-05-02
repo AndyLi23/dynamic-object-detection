@@ -44,7 +44,7 @@ def viz_optical_flow_diff(magnitude_diff, angle_diff):
 def viz_optical_flow_diff_batch(N, geometric_flow_batch, raft_flow_batch, image_batch, magnitude_diff_batch, norm_magnitude_diff_batch, angle_diff_batch, fps, plt_dpi=100, output='optical_flow_diff.avi'):
     height, width = magnitude_diff_batch[0].shape
     fourcc = cv.VideoWriter_fourcc(*'XVID')
-    vid_size = (width * OUT_WIDTH_RATIO, int(height * OUT_HEIGHT_RATIO))
+    vid_size = (int(width * OUT_WIDTH_RATIO), int(height * OUT_HEIGHT_RATIO))
     out = cv.VideoWriter(output, fourcc, fps, vid_size)
 
     print(f'saving optical flow difference video to {output}...')
