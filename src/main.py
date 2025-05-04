@@ -5,6 +5,8 @@ from viz import viz_optical_flow_diff_batch
 from flow import GeometricOpticalFlow
 import numpy as np
 from tqdm import tqdm
+import gc
+import torch
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -69,6 +71,12 @@ if __name__ == '__main__':
     gof_flows = np.concatenate(gof_flows, axis=0)
 
     print('computing optical flow difference...')
+
+    del depth_imgs
+    del img_data
+    del depth_data
+    torch.cuda.empty_cache()
+    gc.collect()
 
     flow_differences = []
     for index in tqdm(range(0, len(raft_flows), params.batch_size)):
