@@ -5,8 +5,10 @@ import torchvision.transforms as T
 import numpy as np
 
 class RaftWrapper:
-    def __init__(self, raft_params: RaftParams):
-        self.raft_params = raft_params        
+    def __init__(self, raft_params: RaftParams, device):
+        self.raft_params = raft_params       
+        self.raft_params.expand_vars() 
+        self.device = device
         self._load_raft()
 
         self.transforms = T.Compose(
@@ -20,13 +22,13 @@ class RaftWrapper:
         sys.path.append(self.raft_params.path)
         from raft import RAFT
 
-        self.model = torch.nn.DataParallel(RAFT(self.raft_params.raft_args)).to(self.raft_params.device)
+        self.model = torch.nn.DataParallel(RAFT(self.raft_params.raft_args)).to(self.device)
         self.model.load_state_dict(torch.load(self.raft_params.model))
         self.model.eval()
 
     def preprocess(self, batch):
         batch = np.array(batch)
-        batch = torch.Tensor(batch).permute(0, 3, 1, 2).to(self.raft_params.device)  # HWC to CHW
+        batch = torch.Tensor(batch).permute(0, 3, 1, 2).to(self.device)  # HWC to CHW
         return self.transforms(batch)
 
     @torch.no_grad()

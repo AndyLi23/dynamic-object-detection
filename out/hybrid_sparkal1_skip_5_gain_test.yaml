@@ -24,7 +24,7 @@ original_fps: 30
 skip_frames: 5
 
 # output: 'out/outdoor_thoth_skip_2'
-output: 'out/hybrid_sparkal1_skip_5_morph_test'
+output: 'out/hybrid_sparkal1_skip_5_gain_test'
 
 raft:
   path: ${RAFT}/core/
@@ -64,19 +64,17 @@ pose_data:
 tracking:
   # if residual magnitude is greater than (min_vel_threshold + depth * vel_threshold_gain) * 1 / fps, 
   # then that point is considered dynamic
-  min_vel_threshold: 1.5
+  min_vel_threshold: 1.0
   vel_threshold_gain: 0.25
 
-  gaussian_smoothing: True
+  gaussian_smoothing: False
   gaussian_kernel_size: 7
-
-  post_processing: [['open', 9], ['close', 5]]
 
 viz:
   viz_video: True
   viz_dynamic_object_masks: True
   vid_dims: [1024, 768]
-  viz_flag_names: ['image', 'depth', 'dynamic mask', 'raft flow', 'residual', 'orig_dynamic_mask']
+  viz_flag_names: ['image', 'depth', 'dynamic mask', 'raft flow', 'residual_xy', 'residual_z']
   # must be 2D: each entry i means viz_flag_names[i] will be in the video at the location of i in the grid
   viz_flags: [[0, 1, 2], [3, 4, 5]]
   viz_max_residual_magnitude: 3.0

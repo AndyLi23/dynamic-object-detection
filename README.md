@@ -4,8 +4,8 @@ For 6.8300 sp25
 #### Dependencies
 
 ```
-pip install 'numpy<2' torch torchvision matplotlib tensorboard scipy opencv dataclasses
-
+pip install 'numpy<2' torch torchvision matplotlib tensorboard scipy opencv dataclasses open3d
+sudo apt-get install ffmpeg x264 libx264-dev
 git clone https://github.com/mbpeterson70/robotdatapy && cd robotdatapy && pip install .
 ```
 

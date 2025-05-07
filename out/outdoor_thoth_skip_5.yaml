@@ -9,11 +9,11 @@
 #   ROBOT: name of the robot (e.g. 'thoth')
 #   RAFT_MODEL: name of the RAFT model (e.g. 'raft-sintel')
 # will be overriden by this config file if the following are set:
-# kmd_env: outdoor
-# robot: thoth
-kmd_env: hybrid
-robot: sparkal1
-raft_model: raft-sintel
+kmd_env: outdoor
+robot: thoth
+# kmd_env: hybrid
+# robot: sparkal1
+raft_model: raft-kitti
 
 # device/batch size for raft & geometric optical flow
 device: cuda
@@ -23,8 +23,8 @@ original_fps: 30
 # run once every `skip_frames` frames
 skip_frames: 5
 
-# output: 'out/outdoor_thoth_skip_2'
-output: 'out/hybrid_sparkal1_skip_5_morph_test'
+output: 'out/outdoor_thoth_skip_5'
+# output: 'out/hybrid_sparkal1_skip_5'
 
 raft:
   path: ${RAFT}/core/
@@ -33,13 +33,11 @@ raft:
 
 time:
   relative: true
-  # t0: 40
-  # tf: 80
-  # t0: 915
-  # tf: 930
-  t0: 695
+  t0: 60.0
+  tf: 120.0
+  # t0: 695
   # t0: 715
-  tf: 750
+  # tf: 750
 
 img_data:
   path: "${KMD}/${KMD_ENV}/bags/${ROBOT}.bag"
@@ -53,7 +51,7 @@ depth_data:
   camera_info_topic: /${ROBOT}/forward/depth/camera_info
   compressed: False
   depth_scale: 1000.0
-  max_depth: 12.5
+  max_depth: 10.0
 
 pose_data:
   type: bag
@@ -62,21 +60,17 @@ pose_data:
   time_tol: 5.0
 
 tracking:
-  # if residual magnitude is greater than (min_vel_threshold + depth * vel_threshold_gain) * 1 / fps, 
-  # then that point is considered dynamic
-  min_vel_threshold: 1.5
-  vel_threshold_gain: 0.25
+  # if residual magnitude is greater than vel_threshold * 1 / fps, then that point is considered dynamic
+  vel_threshold: 2.0
 
   gaussian_smoothing: True
-  gaussian_kernel_size: 7
-
-  post_processing: [['open', 9], ['close', 5]]
+  gaussian_kernel_size: 5
 
 viz:
   viz_video: True
   viz_dynamic_object_masks: True
   vid_dims: [1024, 768]
-  viz_flag_names: ['image', 'depth', 'dynamic mask', 'raft flow', 'residual', 'orig_dynamic_mask']
+  viz_flag_names: ['image', 'depth', 'dynamic mask', 'raft flow', 'residual']
   # must be 2D: each entry i means viz_flag_names[i] will be in the video at the location of i in the grid
-  viz_flags: [[0, 1, 2], [3, 4, 5]]
-  viz_max_residual_magnitude: 3.0
+  viz_flags: [[0, 1, 2], [3, 4, -1]]
+  viz_max_residual_magnitude: 5.0

@@ -5,6 +5,7 @@ from os.path import expanduser, expandvars
 from robotdatapy.data import PoseData, ImgData
 from functools import cached_property
 from typing import Tuple
+import os
 
 def find_transformation(bag_path, param_dict) -> np.array:
     """
@@ -107,13 +108,49 @@ class RaftParams:
     device: str = 'cuda'
     batch_size: int = 24
 
-    def __post_init__(self):
+    def expand_vars(self):
         self.path = expandvars_recursive(self.path)
         self.model = expandvars_recursive(self.model)
 
     @classmethod
     def from_dict(cls, params_dict):
         params_dict['raft_args'] = RaftArgs.from_dict(params_dict['raft_args']) if 'raft_args' in params_dict else RaftArgs()
+        return cls(**params_dict)
+    
+@dataclass
+class TrackingParams:
+    min_vel_threshold: float
+    vel_threshold_gain: float
+    gaussian_smoothing: bool
+    gaussian_kernel_size: int
+    post_processing: list
+    
+    @classmethod
+    def from_dict(cls, params_dict):
+        return cls(**params_dict)
+    
+@dataclass
+class VizParams:
+    viz_video: bool
+    viz_dynamic_object_masks: bool
+    vid_dims: list
+    viz_flag_names: list
+    viz_flags: list
+    viz_max_residual_magnitude: float
+
+    def __post_init__(self):
+        self.viz_flags = np.array(self.viz_flags)
+        self.viz_dynamic_object_masks = self.viz_video and self.viz_name('image') and self.viz_dynamic_object_masks
+
+    @property
+    def viz_residual(self):
+        return self.viz_name('residual')
+    
+    def viz_name(self, name):
+        return np.any(self.viz_flags == self.viz_flag_names.index(name))
+
+    @classmethod
+    def from_dict(cls, params_dict):
         return cls(**params_dict)
 
 @dataclass
@@ -123,12 +160,25 @@ class Params:
     depth_data_params: DepthDataParams
     pose_data_params: PoseDataParams
     raft_params: RaftParams
+    tracking_params: TrackingParams
+    viz_params: VizParams
     time_params: dict
     device: str
     batch_size: int
     original_fps: int
     skip_frames: int
     output: str
+    kmd_env: str = None
+    robot: str = None
+    raft_model: str = None
+
+    def __post_init__(self):
+        if self.kmd_env is not None:
+            os.environ['KMD_ENV'] = self.kmd_env
+        if self.robot is not None:
+            os.environ['ROBOT'] = self.robot
+        if self.raft_model is not None:
+            os.environ['RAFT_MODEL'] = self.raft_model
 
     @classmethod
     def from_yaml(cls, path: str):
@@ -139,12 +189,17 @@ class Params:
             depth_data_params=DepthDataParams.from_dict(params['depth_data']),
             pose_data_params=PoseDataParams.from_dict(params['pose_data']),
             raft_params=RaftParams.from_dict(params['raft']),
+            tracking_params=TrackingParams.from_dict(params['tracking']),
+            viz_params=VizParams.from_dict(params['viz']),
             time_params=params['time'] if 'time' in params else None,
             device=params['device'] if 'device' in params else 'cuda',
             batch_size=params['batch_size'] if 'batch_size' in params else 24,
             original_fps=params['original_fps'] if 'original_fps' in params else 30,
             skip_frames=params['skip_frames'] if 'skip_frames' in params else 1,
             output=params['output'] if 'output' in params else 'output',
+            kmd_env=params['kmd_env'] if 'kmd_env' in params else None,
+            robot=params['robot'] if 'robot' in params else None,
+            raft_model=params['raft_model'] if 'raft_model' in params else None,
         )
     
     @cached_property
@@ -191,13 +246,5 @@ class Params:
     
     @cached_property
     def data_t0(self) -> float:
-        return self.data_t_range[0]
-    
-    @cached_property
-    def data_tf(self) -> float:
-        return self.data_t_range[1]
-    
-    @cached_property
-    def data_t_range(self) -> float:
-        return ImgData.topic_t_range(expandvars_recursive(self.img_data_params.path), 
-                                     expandvars_recursive(self.img_data_params.topic))
+        return ImgData.topic_t0(expandvars_recursive(self.img_data_params.path), 
+                                expandvars_recursive(self.img_data_params.topic))
