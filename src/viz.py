@@ -48,7 +48,7 @@ class OpticalFlowVisualizer:
                     axes[i][j].set_title("RAFT Optical Flow")
                 elif name == 'residual':
                     im = axes[i][j].imshow(residual[frame], cmap='hot', vmin=0, vmax=self.params.viz_max_residual_magnitude)
-                    axes[i][j].set_title("Magnitude XY Residual")
+                    axes[i][j].set_title("Magnitude Residual")
                     cbar = fig.colorbar(im, ax=axes[i][j], orientation='vertical', fraction=0.046, pad=0.04)
                     cbar.set_label("Scale")
 

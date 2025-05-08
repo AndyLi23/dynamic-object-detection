@@ -15,6 +15,8 @@ kmd_env: hybrid
 robot: sparkal1
 raft_model: raft-sintel
 
+use_3d: False
+
 # device/batch size for raft & geometric optical flow
 device: cuda
 batch_size: 24
@@ -24,7 +26,7 @@ original_fps: 30
 skip_frames: 5
 
 # output: 'out/outdoor_thoth_skip_2'
-output: 'out/hybrid_sparkal1_skip_5_morph_test'
+output: 'out/contours_hybrid_sparkal1_max_15'
 
 raft:
   path: ${RAFT}/core/
@@ -52,8 +54,12 @@ depth_data:
   topic: /${ROBOT}/forward/depth/image_rect_raw
   camera_info_topic: /${ROBOT}/forward/depth/camera_info
   compressed: False
+
   depth_scale: 1000.0
-  max_depth: 12.5
+  max_depth: 15.0
+
+  # d, sigmalColor, sigmalSpace. Delete or set to null to disable.
+  bilateral_smooth_depth: [5, 35, 5] # in mm. (before scaling by 1000.0)
 
 pose_data:
   type: bag
@@ -62,15 +68,20 @@ pose_data:
   time_tol: 5.0
 
 tracking:
+  # for 3D:
   # if residual magnitude is greater than (min_vel_threshold + depth * vel_threshold_gain) * 1 / fps, 
   # then that point is considered dynamic
-  min_vel_threshold: 1.5
-  vel_threshold_gain: 0.25
 
-  gaussian_smoothing: True
+  # for 2D:
+  # approximate 3d residual magnitude = depth * K^-1 * [delta_u, delta_v, 0]
+
+  min_vel_threshold: 1.5
+  vel_threshold_gain: 0.2
+
+  gaussian_smoothing: False
   gaussian_kernel_size: 7
 
-  post_processing: [['open', 9], ['close', 5]]
+  post_processing: [['open', 9], ['close', 13]]
 
 viz:
   viz_video: True
@@ -79,4 +90,4 @@ viz:
   viz_flag_names: ['image', 'depth', 'dynamic mask', 'raft flow', 'residual', 'orig_dynamic_mask']
   # must be 2D: each entry i means viz_flag_names[i] will be in the video at the location of i in the grid
   viz_flags: [[0, 1, 2], [3, 4, 5]]
-  viz_max_residual_magnitude: 3.0
+  viz_max_residual_magnitude: 2.0

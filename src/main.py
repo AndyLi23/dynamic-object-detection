@@ -2,13 +2,14 @@ import argparse
 from params import Params
 from raft_wrapper import RaftWrapper
 from viz import OpticalFlowVisualizer
-from flow import Residual3DFlow
+from flow import Residual3DFlow, GeometricOpticalFlow
 from tracker import DynamicObjectTracker
 import numpy as np
 from tqdm import tqdm
 import os
 import torch
 import gc
+import cv2 as cv
 
 
 def copy_params_file(parent_dir, params, args):
@@ -18,7 +19,14 @@ def copy_params_file(parent_dir, params, args):
     print(f'saving params file to {params_copy_path}')
 
 def preprocess_depth(depth, depth_params):
+    depth = depth.astype(np.float32)
+
+    if depth_params.bilateral_smooth_depth is not None:
+        d, sigmaColor, sigmaSpace = depth_params.bilateral_smooth_depth
+        depth = cv.bilateralFilter(depth, d=d, sigmaColor=sigmaColor, sigmaSpace=sigmaSpace)
+
     depth = depth / depth_params.depth_scale
+
     if depth_params.max_depth is not None: depth[depth > depth_params.max_depth] = 0
     return depth
 
@@ -56,7 +64,10 @@ if __name__ == '__main__':
     effective_fps = params.original_fps / params.skip_frames
 
     viz = OpticalFlowVisualizer(params.viz_params, f'{params.output}.avi', effective_fps)
-    res_flow = Residual3DFlow(depth_data.camera_params, device=params.device)
+    if params.use_3d:
+        res_flow = Residual3DFlow(depth_data.camera_params, device=params.device)
+    else:
+        gof_flow = GeometricOpticalFlow(depth_data.camera_params, device=params.device)
     tracker = DynamicObjectTracker(params.tracking_params, effective_fps)
 
     for index in tqdm(range(0, N_frames - 1, params.batch_size)):
@@ -76,11 +87,14 @@ if __name__ == '__main__':
         # print('computing raft optical flow...')
         raft_flows = raft.run_raft(batch_imgs, batch_next_imgs) # (B H W 2)
 
-        residual = res_flow.compute_residual_3d_flow(raft_flows, batch_depth_imgs, batch_cam_poses) # (B H W 3)
+        if params.use_3d:
+            residual = np.linalg.norm(res_flow.compute_residual_3d_flow(raft_flows, batch_depth_imgs, batch_cam_poses), axis=-1) # (B H W 3) -> (B H W)
+        else:
+            residual = gof_flow.compute_residual_2d_flow(raft_flows, batch_depth_imgs[:-1], batch_cam_poses) # (B H W)
 
         # print('computing optical flow residual...')
         dynamic_masks, orig_dynamic_masks = tracker.run_batch_tracker(
-            np.linalg.norm(residual, axis=-1), 
+            residual, 
             batch_depth_imgs[:-1],
             batch_imgs,
             batch_cam_poses[:-1],
@@ -94,7 +108,7 @@ if __name__ == '__main__':
             dynamic_masks,
             orig_dynamic_masks,
             raft_flows,
-            np.linalg.norm(residual, axis=-1),
+            residual,
         )
 
 

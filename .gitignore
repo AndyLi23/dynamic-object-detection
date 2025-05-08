@@ -176,3 +176,4 @@ cython_debug/
 config.sh
 
 *.avi
+out/

@@ -19,8 +19,8 @@ class Residual3DFlow:
         depth_images: (N+1, H, W)
         poses: (N+1, 4, 4)
         """
-        depth_images = torch.tensor(depth_images, device=self.device)                                       # (N+1, H, W)
-        poses = torch.tensor(poses, device=self.device)                                                     # (N+1, 4, 4)
+        depth_images = torch.tensor(depth_images, device=self.device, dtype=torch.float32)                  # (N+1, H, W)
+        poses = torch.tensor(poses, device=self.device, dtype=torch.float32)                                # (N+1, 4, 4)
 
         N = len(raft_flow)
         assert(N + 1 == len(depth_images) == len(poses))
@@ -117,11 +117,8 @@ class Residual3DFlow:
 
 
 
-# Old code before 3-D transition
+# TODO: cleanup shared stuff, convert to torch.tensor constructor
 
-# TODO: use new torch.tensor constructor
-
-@DeprecationWarning
 class GeometricOpticalFlow:
     def __init__(self, depth_camera_params: CameraParams, device: str = 'cuda'):
         self.K = depth_camera_params.K
@@ -129,12 +126,104 @@ class GeometricOpticalFlow:
         self.H = depth_camera_params.height
         self.W = depth_camera_params.width
 
+        self.inv_K = np.linalg.inv(self.K)  # (3, 3)
+
         self.device = device
 
-    def compute_optical_flow(self, dimg, pose0, pose1):
+    def compute_residual_2d_flow(self, raft_flow, depth_images, poses):
+        """
+        raft_flow: (N, H, W, 2)
+        depth_images: (N, H, W)
+        poses: (N+1, 4, 4)
+        """
+        gflow = self.compute_optical_flow_batch(depth_images, poses)                                        # (N, H, W, 2)
 
-        # # scale depth data (mm -> m)
-        # dimg = dimg / self.depth_params.depth_scale                                             # (H, W)
+        resid_flow = raft_flow - gflow                                                                      # (N, H, W, 2)
+
+        resid_flow = self.concat_last_axis(resid_flow, ones=False)                                          # (N, H, W, 3)
+
+        resid_flow = np.einsum('ij,nhwj->nhwi', self.inv_K, resid_flow)                                     # (N, H, W, 3)
+
+        resid_vel = depth_images * np.linalg.norm(resid_flow, axis=-1)                                      # (N, H, W)
+
+        # not time normalized, done in tracker.py
+        return resid_vel
+        
+
+    @torch.no_grad()
+    def compute_optical_flow_batch(self, dimg_batch, poses):
+
+        dimg_batch = torch.tensor(np.array(dimg_batch), device=self.device, dtype=torch.float32)            # (N, H, W)
+        poses = torch.tensor(np.array(poses), device=self.device, dtype=torch.float32)                      # (N+1, 4, 4)
+
+        N = len(dimg_batch)
+        assert(N+1 == len(poses))
+
+        # compute relative poses between frames
+        pose0 = poses[:-1]                                                                                  # (N, 4, 4)
+        pose1_inv = torch.stack([torch.linalg.inv(pose) for pose in poses[1:]], dim=0)                      # (N, 4, 4)
+
+        # T_1_0 = T_w_1^-1 @ T_w_0: transform from frame 0 to frame 1
+        T_1_0 = pose1_inv @ pose0                                                                           # (N, 4, 4)     
+
+
+        # compute masks for valid depth values
+        # invalid_mask = ~((dimg_batch > 0) & (dimg_batch <= self.depth_params.max_depth)) \
+                        #  if self.depth_params.max_depth is not None else dimg_batch == 0                    # (N, H, W)
+        invalid_mask = ~(dimg_batch > 0)                                                                    # (N, H, W)
+        invalid_mask = invalid_mask.cpu().numpy()
+
+        flattened_depths = dimg_batch.view(N, -1, 1)                                                        # (N, H*W, 1)
+
+
+        # compute normalized camera coordinates for each pixel (opencv requires numpy)
+        x, y = np.meshgrid(np.arange(self.W), np.arange(self.H))
+        pixel_coords = np.stack((x, y), axis=-1, dtype=np.float32)                                          # (H, W, 2)
+        pixel_coords_flattened = pixel_coords.reshape(-1, 2)                                                # (H*W,  2)
+
+        norm_cam_coords = cv.undistortPoints(                                                               # (H*W,  2)
+            pixel_coords_flattened, 
+            cameraMatrix=self.K, distCoeffs=self.D
+        ).reshape(-1, 2)
+
+        norm_cam_coords = torch.tensor(norm_cam_coords, device=self.device)                                 # (H*W,  2)
+
+        # project normalized camera coordinates to 3D for each pixel, for each frame
+        norm_cam_coords = self.concat_last_axis(norm_cam_coords).view(1, -1, 3)                             # (1, H*W, 3)
+        
+        coords_3d = norm_cam_coords * flattened_depths                                                      # (1, H*W, 3) * (N, H*W, 1) ->  (N, H*W, 3)
+
+        # compute 3d coordinates in subsequent frame
+        coords_3d_h = self.concat_last_axis(coords_3d)                                                      # (N, H*W, 4)         
+        coords_3d_h_1 = T_1_0 @ coords_3d_h.permute(0, 2, 1)                                                # (N, 4, 4) @ (N, 4, H*W) =     (N, 4, H*W)
+        coords_3d_1 = (coords_3d_h_1.permute(0, 2, 1))[..., :3]                                             # (N, 4, H*W) -> (N, H*W, 4) -> (N, H*W, 3)   
+        coords_3d_1 = coords_3d_1.cpu().numpy()                                                             # (N, H*W, 3)
+
+        # project 3d coordinates in subsequent frame to original image frame
+        projected_pixel_coords_flattened = np.stack([cv.projectPoints(                                      # (N, H*W, 2)
+                coords_3d_1_frame, 
+                rvec=np.zeros(3), tvec=np.zeros(3), 
+                cameraMatrix=self.K, 
+                distCoeffs=self.D,
+            )[0].reshape(-1, 2) for coords_3d_1_frame in coords_3d_1], axis=0)
+
+        # compute flow for each pixel in original frames
+        flattened_flow = projected_pixel_coords_flattened - pixel_coords_flattened[np.newaxis, :]           # (N, H*W, 2) - (1, H*W, 2) =   (N, H*W, 2)        
+
+        flow = flattened_flow.reshape(N, self.H, self.W, 2)                                                 # (N, H, W, 2) 
+
+        flow[invalid_mask] = np.nan
+
+        return flow
+    
+    def concat_last_axis(self, tensor, ones=True):
+        if ones: return torch.concatenate((tensor, torch.ones((*tensor.shape[:-1], 1), dtype=torch.float32, device=self.device)), dim=-1)
+        else: return np.concatenate((tensor, np.zeros((*tensor.shape[:-1], 1), dtype=np.float32)), axis=-1)
+
+
+
+    @DeprecationWarning
+    def compute_optical_flow(self, dimg, pose0, pose1):
 
         # # compute mask for valid depth values
         # valid_mask = ((dimg > 0) & (dimg <= self.depth_params.max_depth)) \
@@ -176,80 +265,6 @@ class GeometricOpticalFlow:
         flow = np.zeros((self.H, self.W, 2), dtype=np.float32)                                  # (H, W, 2) 
         flow[valid_mask] = projected_pixel_coords_flattened_valid - pixel_coords_flattened_valid  
         flow[~valid_mask] = np.nan
-
-        return flow
-
-
-    @torch.no_grad()
-    def compute_optical_flow_batch(self, dimg_batch, poses):
-
-        # scale depth data (mm -> m)
-        # dimg_batch = torch.Tensor(np.array(dimg_batch)).to(self.device) / self.depth_params.depth_scale     # (N, H, W)
-        dimg_batch = torch.Tensor(np.array(dimg_batch)).to(self.device)                                     # (N, H, W)
-        poses = torch.Tensor(np.array(poses)).to(self.device)                                               # (N+1, 4, 4)
-
-        N = len(dimg_batch)
-        assert(N+1 == len(poses))
-
-
-        # compute relative poses between frames
-        pose0 = poses[:-1]                                                                                  # (N, 4, 4)
-        pose1_inv = torch.stack([torch.linalg.inv(pose) for pose in poses[1:]], dim=0)                      # (N, 4, 4)
-
-        # T_1_0 = T_w_1^-1 @ T_w_0: transform from frame 0 to frame 1
-        T_1_0 = pose1_inv @ pose0                                                                           # (N, 4, 4)     
-
-
-        # compute masks for valid depth values
-        # invalid_mask = ~((dimg_batch > 0) & (dimg_batch <= self.depth_params.max_depth)) \
-                        #  if self.depth_params.max_depth is not None else dimg_batch == 0                    # (N, H, W)
-        invalid_mask = ~(dimg_batch > 0)                                                                    # (N, H, W)
-        invalid_mask = invalid_mask.cpu().numpy()
-
-        flattened_depths = dimg_batch.view(N, -1, 1)                                                        # (N, H*W, 1)
-
-
-        # compute normalized camera coordinates for each pixel (opencv requires numpy)
-        x, y = np.meshgrid(np.arange(self.W), np.arange(self.H))
-        pixel_coords = np.stack((x, y), axis=-1, dtype=np.float32)                                          # (H, W, 2)
-        pixel_coords_flattened = pixel_coords.reshape(-1, 2)                                                # (H*W,  2)
-
-        norm_cam_coords = cv.undistortPoints(                                                               # (H*W,  2)
-            pixel_coords_flattened, 
-            cameraMatrix=self.K, distCoeffs=self.D
-        ).reshape(-1, 2)
-
-        norm_cam_coords = torch.Tensor(norm_cam_coords).to(self.device)                                     # (H*W,  2)
-
-        # project normalized camera coordinates to 3D for each pixel, for each frame
-        norm_cam_coords = torch.concatenate((norm_cam_coords, 
-                                             torch.ones((*norm_cam_coords.shape[:-1], 1), dtype=torch.float32, device=self.device)
-                                            ), dim=-1).view(1, -1, 3)                                       # (1, H*W, 3)
-        
-        coords_3d = norm_cam_coords * flattened_depths                                                      # (1, H*W, 3) * (N, H*W, 1) ->  (N, H*W, 3)
-
-        # compute 3d coordinates in subsequent frame
-        coords_3d_h = torch.concatenate((coords_3d, 
-            torch.ones((*coords_3d.shape[:-1], 1), dtype=torch.float32, device=self.device)
-        ), dim=-1)                                                                                          # (N, H*W, 4)         
-        coords_3d_h_1 = T_1_0 @ coords_3d_h.permute(0, 2, 1)                                                # (N, 4, 4) @ (N, 4, H*W) =     (N, 4, H*W)
-        coords_3d_1 = (coords_3d_h_1.permute(0, 2, 1))[..., :3]                                             # (N, 4, H*W) -> (N, H*W, 4) -> (N, H*W, 3)   
-        coords_3d_1 = coords_3d_1.cpu().numpy()                                                             # (N, H*W, 3)
-
-        # project 3d coordinates in subsequent frame to original image frame
-        projected_pixel_coords_flattened = np.stack([cv.projectPoints(                                      # (N, H*W, 2)
-                coords_3d_1_frame, 
-                rvec=np.zeros(3), tvec=np.zeros(3), 
-                cameraMatrix=self.K, 
-                distCoeffs=self.D,
-            )[0].reshape(-1, 2) for coords_3d_1_frame in coords_3d_1], axis=0)
-
-        # compute flow for each pixel in original frames
-        flattened_flow = projected_pixel_coords_flattened - pixel_coords_flattened[np.newaxis, :]           # (N, H*W, 2) - (1, H*W, 2) =   (N, H*W, 2)        
-
-        flow = flattened_flow.reshape(N, self.H, self.W, 2)                                                 # (N, H, W, 2) 
-
-        flow[invalid_mask] = np.nan
 
         return flow
 

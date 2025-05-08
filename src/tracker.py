@@ -21,8 +21,8 @@ class DynamicObjectTracker:
             # # TODO: process new dynamic objects
             contours, _ = cv.findContours(dynamic_mask[frame].astype(np.uint8), cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
 
-            # if len(contours) > 0:
-                # img_batch[frame] = cv.drawContours(img_batch[frame], contours, -1, (255, 0, 0), 1)
+            if len(contours) > 0:
+                img_batch[frame] = cv.drawContours(img_batch[frame], contours, -1, (255, 0, 0), 3)
 
             if draw_objects:
                 self.draw_dynamic_objects(img_batch[frame])
@@ -35,6 +35,9 @@ class DynamicObjectTracker:
             pass
 
     def compute_dynamic_mask(self, residuals, depths):
+
+        # Pre-processing
+
         if self.params.gaussian_smoothing:
             smoothed_residuals = np.zeros_like(residuals)
             for i in range(residuals.shape[0]):
@@ -43,6 +46,9 @@ class DynamicObjectTracker:
 
         threshold = self.min_residual_threshold + self.residual_threshold_gain * depths  # (N, H, W)
         mask = ((residuals > threshold) & ~np.isnan(residuals)).astype(np.uint8)  # (N, H, W)
+
+        # Post-processing
+
         orig_mask = mask.copy()
 
         for method, kernel_size in self.params.post_processing:

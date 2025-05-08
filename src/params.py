@@ -55,6 +55,8 @@ class ImgDataParams:
 class DepthDataParams(ImgDataParams):
     depth_scale: float = 1000.0
     max_depth: float = None
+    bilateral_smooth_depth: list = None
+
 
 @dataclass
 class PoseDataParams:
@@ -156,6 +158,7 @@ class VizParams:
 @dataclass
 class Params:
 
+    use_3d: bool
     img_data_params: ImgDataParams
     depth_data_params: DepthDataParams
     pose_data_params: PoseDataParams
@@ -185,6 +188,7 @@ class Params:
         with open(path, 'r') as fin:
             params = yaml.safe_load(fin)
         return cls(
+            use_3d=params['use_3d'] if 'use_3d' in params else False,
             img_data_params=ImgDataParams.from_dict(params['img_data']),
             depth_data_params=DepthDataParams.from_dict(params['depth_data']),
             pose_data_params=PoseDataParams.from_dict(params['pose_data']),
