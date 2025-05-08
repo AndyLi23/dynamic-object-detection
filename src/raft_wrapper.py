@@ -36,5 +36,4 @@ class RaftWrapper:
     @torch.no_grad()
     def run_raft_batch(self, img1_batch, img2_batch):
         _, flow_up = self.model(self.preprocess(img1_batch), self.preprocess(img2_batch), iters=self.raft_params.iters, test_mode=True)
-        flow_up = flow_up.permute(0, 2, 3, 1).cpu().numpy()  # CHW to HWC
-        return flow_up
+        return flow_up.permute(0, 2, 3, 1).cpu().numpy()  # CHW to HWC

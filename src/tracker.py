@@ -2,54 +2,91 @@ import cv2 as cv
 import numpy as np
 import open3d as o3d
 
-from gnn import global_nearest_neighbor
+from gnn import global_nearest_neighbor_dynamic_objects
 
 class DynamicObjectTracker:
-    def __init__(self, params, effective_fps):
+    def __init__(self, params, depth_camera_params, effective_fps):
         self.params = params
+        self.H = depth_camera_params.height
+        self.W = depth_camera_params.width
         self.min_residual_threshold = params.min_vel_threshold / effective_fps
         self.residual_threshold_gain = params.vel_threshold_gain / effective_fps
 
-        self.tracked_objects = []
+        self.tracked_objects = {}
         self._id = 0
 
-    def run_tracker(self, residuals, depth_batch, img_batch, T_1_0, draw_objects=False):
+    def run_tracker(self, residuals, depth_batch, img_batch, coords_3d, raft_coords_3d_1, draw_objects=False):
+        """
+        residuals: (N, H, W)
+        depth_batch: (N, H, W)
+        img_batch: (N, H, W, 3)
+        coords_3d: (N, H*W, 3)
+        raft_coords_3d_1: (N, H*W, 3)
+        """
         dynamic_mask, orig_dynamic_mask = self.compute_dynamic_mask_batch(residuals, depth_batch)  # (N, H, W)
 
         for frame in range(len(img_batch)):
             
-            # # TODO: process new dynamic objects
             contours, _ = cv.findContours(dynamic_mask[frame].astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
             # if len(contours) > 0:
                 # img_batch[frame] = cv.drawContours(img_batch[frame], contours, -1, (255, 0, 0), 3)
 
-            new_objects = self.contours_to_objects(contours, depth_batch[frame])
+            new_objects = self.contours_to_objects(contours, coords_3d[frame])
 
-            
+            associations = global_nearest_neighbor_dynamic_objects(
+                tracked_objects=self.tracked_objects, 
+                new_objects=new_objects, 
+                cost_fn=DynamicObjectTrack.chamfer_distance, 
+                max_cost=self.params.max_chamfer_distance,
+            )
+
+            for new_obj in new_objects:
+                next_frame_points = raft_coords_3d_1[frame][new_obj.mask]
+                if new_obj.id in associations:
+                    self.tracked_objects[associations[new_obj.id]].update(new_obj.contour, next_frame_points)
+                else:
+                    new_obj.update(new_obj.contour, next_frame_points)
+                    self.tracked_objects[new_obj.id] = new_obj
+
+            to_remove_ids = [obj.id for obj in self.tracked_objects.values() if obj.id not in associations.values()]
+            self.remove_dynamic_objects(to_remove_ids)
 
             if draw_objects:
                 self.draw_dynamic_objects(img_batch[frame])
 
+            # # Propogate dynamic objects to next frame
+            # for obj in self.tracked_objects.values():
+            #     obj.predict(T_1_0[frame])
+
         return dynamic_mask, orig_dynamic_mask
     
-    def contours_to_objects(self, contours, depth):
+    def contours_to_objects(self, contours, coords_3d_frame):
+        """
+        contours: List
+        coords_3d_frame: (H*W, 3)
+        """
         objects = []
         for contour in contours:
             if len(contour) < 3: continue
-            mask = np.zeros_like(depth, dtype=np.uint8)
+            mask = np.zeros((self.H, self.W), dtype=np.uint8)
             cv.fillPoly(mask, [contour], 1)
-            points = depth[mask == 1]
-            obj = DynamicObjectTrack(self._id, contour, points)
+            mask = mask.reshape((-1)).astype(bool)
+            points = coords_3d_frame[mask] 
+            obj = DynamicObjectTrack(self._id, contour, mask, points)
             self._id += 1
             objects.append(obj)
 
         return objects
     
     def draw_dynamic_objects(self, img):
-        for obj in self.tracked_objects:
+        for obj in self.tracked_objects.values():
             # TODO: draw object on image
             pass
+
+    def remove_dynamic_objects(self, to_remove_ids):
+        for id_ in to_remove_ids:
+            del self.tracked_objects[id_]
 
     def compute_dynamic_mask_batch(self, residuals, depths):
 
@@ -84,18 +121,18 @@ class DynamicObjectTracker:
     
 
 class DynamicObjectTrack:
-    def __init__(self, id, contour, points):
-        self.id = id
+    def __init__(self, id_, contour, mask, points):
+        self.id = id_
+        self.mask = mask
+        self.o3d = o3d.geometry.PointCloud()
         self.update(contour, points)
 
     def update(self, contour, points):
         self.contour = contour
-        self.points = points
-        self.o3d = o3d.geometry.PointCloud()
         self.o3d.points = o3d.utility.Vector3dVector(points)
 
     @classmethod
-    def similarity(cls, obj1, obj2):
+    def chamfer_distance(cls, obj1, obj2):
         # Compute Chamfer Distance between 3d points
         dist1 = np.mean(obj1.o3d.compute_point_cloud_distance(obj2.o3d))
         dist2 = np.mean(obj2.o3d.compute_point_cloud_distance(obj1.o3d))

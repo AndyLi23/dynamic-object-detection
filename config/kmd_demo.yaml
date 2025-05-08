@@ -9,8 +9,6 @@
 #   ROBOT: name of the robot (e.g. 'thoth')
 #   RAFT_MODEL: name of the RAFT model (e.g. 'raft-sintel')
 # will be overriden by this config file if the following are set:
-# kmd_env: outdoor
-# robot: thoth
 kmd_env: hybrid
 robot: sparkal1
 raft_model: raft-sintel
@@ -25,8 +23,7 @@ original_fps: 30
 # run once every `skip_frames` frames
 skip_frames: 5
 
-# output: 'out/outdoor_thoth_skip_2'
-output: 'out/contours_hybrid_sparkal1_max_15'
+output: 'out/test_new_code'
 
 raft:
   path: ${RAFT}/core/
@@ -71,10 +68,8 @@ tracking:
   # for 3D:
   # if residual magnitude is greater than (min_vel_threshold + depth * vel_threshold_gain) * 1 / fps, 
   # then that point is considered dynamic
-
   # for 2D:
   # approximate 3d residual magnitude = depth * K^-1 * [delta_u, delta_v, 0]
-
   min_vel_threshold: 1.5
   vel_threshold_gain: 0.2
 
@@ -83,10 +78,14 @@ tracking:
 
   post_processing: [['open', 9], ['close', 13]]
 
+  # maximum chamfer distance for a projected dynamic object & a newly detected
+  # dynamic object to be considered for GNN association
+  max_chamfer_distance: 0.5
+
 viz:
   viz_video: True
   viz_dynamic_object_masks: True
-  vid_dims: [1024, 768]
+  vid_dims: [1024, 656]
   viz_flag_names: ['image', 'depth', 'dynamic mask', 'raft flow', 'residual', 'orig_dynamic_mask']
   # must be 2D: each entry i means viz_flag_names[i] will be in the video at the location of i in the grid
   viz_flags: [[0, 1, 2], [3, 4, 5]]

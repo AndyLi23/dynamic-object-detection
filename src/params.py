@@ -108,7 +108,6 @@ class RaftParams:
     raft_args: RaftArgs
     iters: int = 12
     device: str = 'cuda'
-    batch_size: int = 24
 
     def expand_vars(self):
         self.path = expandvars_recursive(self.path)
@@ -126,6 +125,7 @@ class TrackingParams:
     gaussian_smoothing: bool
     gaussian_kernel_size: int
     post_processing: list
+    max_chamfer_distance: float
     
     @classmethod
     def from_dict(cls, params_dict):

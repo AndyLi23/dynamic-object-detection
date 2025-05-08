@@ -63,7 +63,7 @@ if __name__ == '__main__':
     imgs = np.stack([img_data.img(t) for t in times], axis=0)
     depth_imgs = np.stack([preprocess_depth(depth_data.img(t), params.depth_data_params) for t in times], axis=0)
     cam_poses = np.stack([cam_pose_data.pose(t) for t in times], axis=0)
-    T_1_0 = compute_relative_poses(cam_poses) # torch tensor
+    T_1_0 = compute_relative_poses(torch.tensor(cam_poses, dtype=torch.float32, device=params.device)) # torch tensor
 
     print(f'running algorithm on {N_frames} frames from t={times[0]} to t={times[-1]}')
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
     viz = OpticalFlowVisualizer(params.viz_params, f'{params.output}.avi', effective_fps)
     gof_flow = GeometricOpticalFlow(depth_data.camera_params, device=params.device)
-    tracker = DynamicObjectTracker(params.tracking_params, effective_fps)
+    tracker = DynamicObjectTracker(params.tracking_params, depth_data.camera_params, effective_fps)
 
     for index in tqdm(range(0, N_frames - 1, params.batch_size)):
 
@@ -95,14 +95,15 @@ if __name__ == '__main__':
         raft_flows = raft.run_raft_batch(batch_imgs, batch_next_imgs) # (B H W 2)
 
         # print('computing optical flow residual...')
-        residual = gof_flow.compute_flow(raft_flows, batch_depth_imgs, batch_T_1_0, use_3d=params.use_3d) # (B H W)
+        residual, coords_3d, raft_coords_3d_1= gof_flow.compute_flow(raft_flows, batch_depth_imgs, batch_T_1_0, use_3d=params.use_3d) # (B H W)
 
         # print('running dynamic object tracker...')
         dynamic_masks, orig_dynamic_masks = tracker.run_tracker(
             residual, 
             batch_depth_imgs[:-1],
             batch_imgs,
-            T_1_0,
+            coords_3d,
+            raft_coords_3d_1,
             draw_objects=params.viz_params.viz_dynamic_object_masks,
         )
 
