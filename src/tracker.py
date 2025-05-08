@@ -13,28 +13,45 @@ class DynamicObjectTracker:
         self.tracked_objects = []
         self._id = 0
 
-    def run_batch_tracker(self, residuals, depth_batch, img_batch, poses, draw_objects=False):
-        dynamic_mask, orig_dynamic_mask = self.compute_dynamic_mask(residuals, depth_batch)  # (N, H, W)
+    def run_tracker(self, residuals, depth_batch, img_batch, T_1_0, draw_objects=False):
+        dynamic_mask, orig_dynamic_mask = self.compute_dynamic_mask_batch(residuals, depth_batch)  # (N, H, W)
 
         for frame in range(len(img_batch)):
             
             # # TODO: process new dynamic objects
-            contours, _ = cv.findContours(dynamic_mask[frame].astype(np.uint8), cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+            contours, _ = cv.findContours(dynamic_mask[frame].astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
-            if len(contours) > 0:
-                img_batch[frame] = cv.drawContours(img_batch[frame], contours, -1, (255, 0, 0), 3)
+            # if len(contours) > 0:
+                # img_batch[frame] = cv.drawContours(img_batch[frame], contours, -1, (255, 0, 0), 3)
+
+            new_objects = self.contours_to_objects(contours, depth_batch[frame])
+
+            
 
             if draw_objects:
                 self.draw_dynamic_objects(img_batch[frame])
 
         return dynamic_mask, orig_dynamic_mask
     
+    def contours_to_objects(self, contours, depth):
+        objects = []
+        for contour in contours:
+            if len(contour) < 3: continue
+            mask = np.zeros_like(depth, dtype=np.uint8)
+            cv.fillPoly(mask, [contour], 1)
+            points = depth[mask == 1]
+            obj = DynamicObjectTrack(self._id, contour, points)
+            self._id += 1
+            objects.append(obj)
+
+        return objects
+    
     def draw_dynamic_objects(self, img):
         for obj in self.tracked_objects:
             # TODO: draw object on image
             pass
 
-    def compute_dynamic_mask(self, residuals, depths):
+    def compute_dynamic_mask_batch(self, residuals, depths):
 
         # Pre-processing
 
@@ -64,33 +81,15 @@ class DynamicObjectTracker:
                     mask[i] = cv.morphologyEx(mask[i], cv.MORPH_CLOSE, kernel)
 
         return mask, orig_mask
-
-
-    # Old code with geometric flow
-    @DeprecationWarning
-    def compute_batched_dynamic_pixels(self, raft_batch, geometric_batch, ret_mag_residual=False):
-        flow_diff = raft_batch - geometric_batch                                                            # (N, H, W, 2)
-        valid_mask = ~np.isnan(flow_diff[..., 0]) & ~np.isnan(flow_diff[..., 1])                            # (N, H, W)
-        magnitude_diff = np.zeros((*flow_diff.shape[:-1], 1), dtype=np.float32)                             # (N, H, W, 1) x 2
-        magnitude_diff[valid_mask], _ = cv.cartToPolar(flow_diff[..., 0][valid_mask], flow_diff[..., 1][valid_mask])
-        geometric_batch_magnitude = np.linalg.norm(geometric_batch, axis=-1, keepdims=True)                 # (N, H, W, 1)
-
-        dynamic_mask = (magnitude_diff > self.params.absolute_threshold)[..., 0] & \
-                       (magnitude_diff > self.params.relative_threshold * geometric_batch_magnitude)[..., 0] & \
-                       valid_mask                                                                           # (N, H, W)
-
-        if ret_mag_residual: magnitude_diff[~valid_mask] = np.nan
-
-        return magnitude_diff[..., 0] if ret_mag_residual else None, dynamic_mask                           # (N, H, W) x 2
     
 
 class DynamicObjectTrack:
-    def __init__(self, id, mask, points):
+    def __init__(self, id, contour, points):
         self.id = id
-        self.update(mask, points)
+        self.update(contour, points)
 
-    def update(self, mask, points):
-        self.mask = mask
+    def update(self, contour, points):
+        self.contour = contour
         self.points = points
         self.o3d = o3d.geometry.PointCloud()
         self.o3d.points = o3d.utility.Vector3dVector(points)

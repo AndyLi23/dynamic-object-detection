@@ -2,7 +2,7 @@ import argparse
 from params import Params
 from raft_wrapper import RaftWrapper
 from viz import OpticalFlowVisualizer
-from flow import Residual3DFlow, GeometricOpticalFlow
+from flow import GeometricOpticalFlow
 from tracker import DynamicObjectTracker
 import numpy as np
 from tqdm import tqdm
@@ -30,6 +30,15 @@ def preprocess_depth(depth, depth_params):
     if depth_params.max_depth is not None: depth[depth > depth_params.max_depth] = 0
     return depth
 
+def compute_relative_poses(poses):
+    pose0 = poses[:-1]                                                                                  # (N, 4, 4)
+    pose1_inv = torch.stack([torch.linalg.inv(pose) for pose in poses[1:]], dim=0)                      # (N, 4, 4)
+
+    # T_1_0 = T_w_1^-1 @ T_w_0: transform from frame 0 to frame 1
+    T_1_0 = pose1_inv @ pose0                                                                           # (N, 4, 4)      
+
+    return T_1_0
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
@@ -54,6 +63,7 @@ if __name__ == '__main__':
     imgs = np.stack([img_data.img(t) for t in times], axis=0)
     depth_imgs = np.stack([preprocess_depth(depth_data.img(t), params.depth_data_params) for t in times], axis=0)
     cam_poses = np.stack([cam_pose_data.pose(t) for t in times], axis=0)
+    T_1_0 = compute_relative_poses(cam_poses) # torch tensor
 
     print(f'running algorithm on {N_frames} frames from t={times[0]} to t={times[-1]}')
 
@@ -64,10 +74,7 @@ if __name__ == '__main__':
     effective_fps = params.original_fps / params.skip_frames
 
     viz = OpticalFlowVisualizer(params.viz_params, f'{params.output}.avi', effective_fps)
-    if params.use_3d:
-        res_flow = Residual3DFlow(depth_data.camera_params, device=params.device)
-    else:
-        gof_flow = GeometricOpticalFlow(depth_data.camera_params, device=params.device)
+    gof_flow = GeometricOpticalFlow(depth_data.camera_params, device=params.device)
     tracker = DynamicObjectTracker(params.tracking_params, effective_fps)
 
     for index in tqdm(range(0, N_frames - 1, params.batch_size)):
@@ -82,22 +89,20 @@ if __name__ == '__main__':
         batch_imgs = imgs[index:batch_end]
         batch_next_imgs = imgs[index + 1:batch_end + 1]
         batch_depth_imgs = depth_imgs[index:batch_end + 1]
-        batch_cam_poses = cam_poses[index:batch_end + 1]
+        batch_T_1_0 = T_1_0[index:batch_end]
 
         # print('computing raft optical flow...')
-        raft_flows = raft.run_raft(batch_imgs, batch_next_imgs) # (B H W 2)
-
-        if params.use_3d:
-            residual = np.linalg.norm(res_flow.compute_residual_3d_flow(raft_flows, batch_depth_imgs, batch_cam_poses), axis=-1) # (B H W 3) -> (B H W)
-        else:
-            residual = gof_flow.compute_residual_2d_flow(raft_flows, batch_depth_imgs[:-1], batch_cam_poses) # (B H W)
+        raft_flows = raft.run_raft_batch(batch_imgs, batch_next_imgs) # (B H W 2)
 
         # print('computing optical flow residual...')
-        dynamic_masks, orig_dynamic_masks = tracker.run_batch_tracker(
+        residual = gof_flow.compute_flow(raft_flows, batch_depth_imgs, batch_T_1_0, use_3d=params.use_3d) # (B H W)
+
+        # print('running dynamic object tracker...')
+        dynamic_masks, orig_dynamic_masks = tracker.run_tracker(
             residual, 
             batch_depth_imgs[:-1],
             batch_imgs,
-            batch_cam_poses[:-1],
+            T_1_0,
             draw_objects=params.viz_params.viz_dynamic_object_masks,
         )
 
