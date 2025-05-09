@@ -23,7 +23,7 @@ original_fps: 30
 # run once every `skip_frames` frames
 skip_frames: 5
 
-output: 'out/test_save_objects'
+output: 'out/global_save'
 
 raft:
   path: ${RAFT}/core/
@@ -80,7 +80,7 @@ tracking:
 
   # maximum chamfer distance for a projected dynamic object & a newly detected
   # dynamic object to be considered for GNN association
-  max_chamfer_distance: 0.5
+  max_chamfer_distance: 0.25
 
 viz:
   viz_video: True

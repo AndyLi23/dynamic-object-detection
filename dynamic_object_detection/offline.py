@@ -10,7 +10,8 @@ import os
 import torch
 import gc
 import cv2 as cv
-from dod_util import copy_params_file, preprocess_depth, compute_relative_poses
+
+from dynamic_object_detection.dod_util import copy_params_file, preprocess_depth, compute_relative_poses
 
 
 if __name__ == '__main__':
@@ -88,6 +89,7 @@ if __name__ == '__main__':
             coords_3d,
             raft_coords_3d_1,
             times=times[index:batch_end],
+            cam_poses=cam_poses[index:batch_end],
             draw_objects=params.viz_params.viz_dynamic_object_masks,
         )
 

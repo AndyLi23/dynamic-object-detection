@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 import open3d as o3d
 
-from dod_util import global_nearest_neighbor_dynamic_objects
+from dynamic_object_detection.dod_util import global_nearest_neighbor_dynamic_objects
 import pickle
 
 class DynamicObjectTracker:
@@ -17,13 +17,15 @@ class DynamicObjectTracker:
         self.all_objects = {}
         self._id = 0
 
-    def run_tracker(self, residuals, imgs, depths, coords_3d, raft_coords_3d_1, times, draw_objects=False):
+    def run_tracker(self, residuals, imgs, depths, coords_3d, raft_coords_3d_1, times, cam_poses, draw_objects=False):
         """
         residuals: (N, H, W)
         imgs: (N, H, W, 3)
         depths: (N, H, W)
         coords_3d: (N, H*W, 3)
         raft_coords_3d_1: (N, H*W, 3)
+        cam_poses: (N, 4, 4)
+        times: (N,)
         """
         dynamic_mask, orig_dynamic_mask = self.compute_dynamic_mask_batch(residuals, depths)  # (N, H, W)
 
@@ -31,7 +33,7 @@ class DynamicObjectTracker:
             
             contours, _ = cv.findContours(dynamic_mask[frame].astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
-            new_objects, pointclouds = self.contours_to_objects(contours, coords_3d[frame])
+            new_objects, world_pointclouds = self.contours_to_objects(contours, coords_3d[frame], cam_poses[frame])
 
             associations = global_nearest_neighbor_dynamic_objects(
                 tracked_objects=self.tracked_objects, 
@@ -43,7 +45,7 @@ class DynamicObjectTracker:
             to_remove_ids = [obj.id for obj in self.tracked_objects.values() if obj.id not in associations.values()]
             self.remove_dynamic_objects(to_remove_ids)
 
-            for new_obj, pcl in zip(new_objects, pointclouds):
+            for new_obj, wpcl in zip(new_objects, world_pointclouds):
                 next_frame_points = raft_coords_3d_1[frame][new_obj.mask]
                 if new_obj.id in associations:
                     to_update_id = associations[new_obj.id]
@@ -53,7 +55,7 @@ class DynamicObjectTracker:
                     self.all_objects[new_obj.id] = new_obj # track all over time
 
                 self.tracked_objects[to_update_id].update(new_obj.contour, next_frame_points)
-                self.tracked_objects[to_update_id].add_points_time(pcl, times[frame])
+                self.tracked_objects[to_update_id].add_points_time(wpcl, times[frame])
 
             if draw_objects:
                 for obj in self.tracked_objects.values():
@@ -62,13 +64,13 @@ class DynamicObjectTracker:
 
         return dynamic_mask, orig_dynamic_mask
     
-    def contours_to_objects(self, contours, coords_3d_frame):
+    def contours_to_objects(self, contours, coords_3d_frame, cam_pose):
         """
         contours: List
         coords_3d_frame: (H*W, 3)
         """
         objects = []
-        pointclouds = []
+        world_pointclouds = []
         for contour in contours:
             if len(contour) < 3: continue
             mask = np.zeros((self.H, self.W), dtype=np.uint8)
@@ -78,9 +80,11 @@ class DynamicObjectTracker:
             obj = DynamicObjectTrack(self._id, contour, mask, points)
             self._id += 1
             objects.append(obj)
-            pointclouds.append(points)
 
-        return objects, pointclouds
+            world_points = self.transform_points(cam_pose, points)
+            world_pointclouds.append(world_points)
+
+        return objects, world_pointclouds
 
     def remove_dynamic_objects(self, to_remove_ids):
         for id_ in to_remove_ids:
@@ -117,14 +121,18 @@ class DynamicObjectTracker:
 
         return mask, orig_mask
     
-    def pre_pickle(self):
-        for obj in self.all_objects.values():
-            obj.pre_pickle()
+    def transform_points(self, T_w_frame, points):
+        """
+        Transform points from camera frame to worlod frame
+        T_w_frame: (4, 4)
+        points: (N, 3)
+        """
+        points_h = np.hstack((points, np.ones((points.shape[0], 1))))
+        return (T_w_frame @ points_h.T)[:3].T
     
     def save_all_objects_to_pickle(self, file_path):
-        self.pre_pickle()
         with open(file_path, 'wb') as f:
-            pickle.dump(list(self.all_objects.values()), f)
+            pickle.dump({obj.id : obj.to_dict() for obj in self.all_objects.values()}, f)
     
 
 class DynamicObjectTrack:
@@ -145,11 +153,12 @@ class DynamicObjectTrack:
         self.points_list.append(points)
         self.times.append(time)
 
-    def pre_pickle(self):
-        del self.points
-        del self.o3d
-        del self.mask
-        del self.contour
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'times': self.times,
+            'points': self.points_list,
+        }
 
     @classmethod
     def chamfer_distance(cls, obj1, obj2):
@@ -157,5 +166,5 @@ class DynamicObjectTrack:
         dist1 = np.mean(obj1.o3d.compute_point_cloud_distance(obj2.o3d))
         dist2 = np.mean(obj2.o3d.compute_point_cloud_distance(obj1.o3d))
 
-        chamfer_distance = dist1 + dist2
+        chamfer_distance = min(dist1, dist2)
         return chamfer_distance

@@ -65,7 +65,7 @@ def copy_params_file(parent_dir, params, args):
     params_copy_path = os.path.join(parent_dir, f'{os.path.basename(params.output)}.yaml')
     with open(args.params, 'r') as src_file, open(params_copy_path, 'w') as dest_file:
         dest_file.write(src_file.read())
-    print(f'saving params file to {params_copy_path}')
+    print(f'saved params file to {params_copy_path}')
 
 def preprocess_depth(depth, depth_params):
     depth = depth.astype(np.float32)

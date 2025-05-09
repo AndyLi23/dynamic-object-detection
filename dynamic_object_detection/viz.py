@@ -5,6 +5,9 @@ import cv2 as cv
 from tqdm import tqdm
 from itertools import product
 import gc
+import pickle
+import random
+import open3d as o3d
 
 PLT_DPI = 100
 
@@ -84,6 +87,43 @@ class OpticalFlowVisualizer:
         hsv[..., 2][~valid_mask] = 255
         return cv.cvtColor(hsv, cv.COLOR_HSV2BGR)
    
+
+
+def viz_tracked_objects(pickle_file, downsample_voxel_size=0.5, ids=None):
+    with open(pickle_file, 'rb') as file:
+        object_list = pickle.load(file)
+
+    app = o3d.visualization.gui.Application.instance
+    app.initialize()
+    vis = o3d.visualization.O3DVisualizer()
+    vis.show_skybox(False)
+
+    origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=10.0)
+    vis.add_geometry("origin", origin)
+
+    for id_, obj in object_list.items():
+        if ids is not None and id_ not in ids: continue
+        color = [random.random() for _ in range(3)]
+
+        points = np.concatenate(obj['points'], axis=0)
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(points)
+        pcd = pcd.voxel_down_sample(voxel_size=downsample_voxel_size)
+        pcd.paint_uniform_color(color)
+
+        if len(pcd.points) < 3: continue
+
+        centroid = points.mean(axis=0)
+        max_z = points[:, 2].max()
+        label_pos = centroid + np.array([0, 0, max_z - centroid[2] + 0.5])
+
+        vis.add_geometry(f"pcl {id_}", pcd)
+        vis.add_3d_label(label_pos, f"{id_}")
+
+    vis.reset_camera_to_default()
+    app.add_window(vis)
+    app.run()
+
 
 
 @DeprecationWarning
