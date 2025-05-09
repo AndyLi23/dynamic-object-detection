@@ -27,13 +27,9 @@ class RaftWrapper:
         self.model.eval()
 
     def preprocess(self, img):
-        if len(img.shape) == 4:
-            img = torch.Tensor(img).permute(0, 3, 1, 2).to(self.device)
-        else:
-            img = torch.Tensor(img).permute(2, 0, 1).unsqueeze(0).to(self.device) # HWC to CHW
-        return self.transforms(img)
+        return self.transforms(img.permute(0, 3, 1, 2))   # HWC to CHW
 
     @torch.no_grad()
     def run_raft_batch(self, img1_batch, img2_batch):
         _, flow_up = self.model(self.preprocess(img1_batch), self.preprocess(img2_batch), iters=self.raft_params.iters, test_mode=True)
-        return flow_up.permute(0, 2, 3, 1).cpu().numpy()  # CHW to HWC
+        return flow_up.permute(0, 2, 3, 1)                # CHW to HWC

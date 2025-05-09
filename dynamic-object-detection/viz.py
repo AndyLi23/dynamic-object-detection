@@ -14,7 +14,7 @@ class OpticalFlowVisualizer:
         self.params = viz_params
         if not self.params.viz_video: return
 
-        # matplotlib.use('Agg')
+        matplotlib.use('Agg')
 
         fourcc = cv.VideoWriter_fourcc(*'XVID')
         self.plt_shape = self.params.viz_flags.shape

@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from collections import defaultdict
+import cv2 as cv
+import os
+import torch
 
 def global_nearest_neighbor(data1: list, data2: list, cost_fn: callable, max_cost: float=None):
     """
@@ -55,3 +58,32 @@ def global_nearest_neighbor_dynamic_objects(tracked_objects: dict, new_objects: 
     assignment = global_nearest_neighbor(tracked_objects_list, new_objects, cost_fn, max_cost)
     id_assignment = {new_objects[i].id : tracked_objects[j].id for i, j in assignment.items()}
     return id_assignment
+
+
+
+def copy_params_file(parent_dir, params, args):
+    params_copy_path = os.path.join(parent_dir, f'{os.path.basename(params.output)}.yaml')
+    with open(args.params, 'r') as src_file, open(params_copy_path, 'w') as dest_file:
+        dest_file.write(src_file.read())
+    print(f'saving params file to {params_copy_path}')
+
+def preprocess_depth(depth, depth_params):
+    depth = depth.astype(np.float32)
+
+    if depth_params.bilateral_smooth_depth is not None:
+        d, sigmaColor, sigmaSpace = depth_params.bilateral_smooth_depth
+        depth = cv.bilateralFilter(depth, d=d, sigmaColor=sigmaColor, sigmaSpace=sigmaSpace)
+
+    depth = depth / depth_params.depth_scale
+
+    if depth_params.max_depth is not None: depth[depth > depth_params.max_depth] = 0
+    return depth
+
+def compute_relative_poses(poses):
+    pose0 = poses[:-1]                                                                                  # (N, 4, 4)
+    pose1_inv = torch.stack([torch.linalg.inv(pose) for pose in poses[1:]], dim=0)                      # (N, 4, 4)
+
+    # T_1_0 = T_w_1^-1 @ T_w_0: transform from frame 0 to frame 1
+    T_1_0 = pose1_inv @ pose0                                                                           # (N, 4, 4)      
+
+    return T_1_0
