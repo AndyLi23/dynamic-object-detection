@@ -177,3 +177,5 @@ config.sh
 
 *.avi
 out/
+
+other/
