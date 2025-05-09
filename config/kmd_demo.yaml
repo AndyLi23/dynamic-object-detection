@@ -23,7 +23,7 @@ original_fps: 30
 # run once every `skip_frames` frames
 skip_frames: 5
 
-output: 'out/test_new_code'
+output: 'out/test_save_objects'
 
 raft:
   path: ${RAFT}/core/

@@ -2,7 +2,8 @@ import cv2 as cv
 import numpy as np
 import open3d as o3d
 
-from dodutil import global_nearest_neighbor_dynamic_objects
+from dod_util import global_nearest_neighbor_dynamic_objects
+import pickle
 
 class DynamicObjectTracker:
     def __init__(self, params, depth_camera_params, effective_fps):
@@ -13,9 +14,10 @@ class DynamicObjectTracker:
         self.residual_threshold_gain = params.vel_threshold_gain / effective_fps
 
         self.tracked_objects = {}
+        self.all_objects = {}
         self._id = 0
 
-    def run_tracker(self, residuals, imgs, depths, coords_3d, raft_coords_3d_1, draw_objects=False):
+    def run_tracker(self, residuals, imgs, depths, coords_3d, raft_coords_3d_1, times, draw_objects=False):
         """
         residuals: (N, H, W)
         imgs: (N, H, W, 3)
@@ -29,7 +31,7 @@ class DynamicObjectTracker:
             
             contours, _ = cv.findContours(dynamic_mask[frame].astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
-            new_objects = self.contours_to_objects(contours, coords_3d[frame])
+            new_objects, pointclouds = self.contours_to_objects(contours, coords_3d[frame])
 
             associations = global_nearest_neighbor_dynamic_objects(
                 tracked_objects=self.tracked_objects, 
@@ -38,22 +40,25 @@ class DynamicObjectTracker:
                 max_cost=self.params.max_chamfer_distance,
             )
 
-            print(self.tracked_objects, new_objects, associations)
-
-            for new_obj in new_objects:
-                next_frame_points = raft_coords_3d_1[frame][new_obj.mask]
-                if new_obj.id in associations:
-                    self.tracked_objects[associations[new_obj.id]].update(new_obj.contour, next_frame_points)
-                else:
-                    new_obj.update(new_obj.contour, next_frame_points)
-                    self.tracked_objects[new_obj.id] = new_obj
-
             to_remove_ids = [obj.id for obj in self.tracked_objects.values() if obj.id not in associations.values()]
             self.remove_dynamic_objects(to_remove_ids)
 
-            for obj in self.tracked_objects.values():
-                imgs[frame] = cv.drawContours(imgs[frame], [obj.contour], -1, (255, 0, 0), 3)
-                imgs[frame] = cv.putText(imgs[frame], str(obj.id), tuple(obj.contour[0][0]), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            for new_obj, pcl in zip(new_objects, pointclouds):
+                next_frame_points = raft_coords_3d_1[frame][new_obj.mask]
+                if new_obj.id in associations:
+                    to_update_id = associations[new_obj.id]
+                else:
+                    to_update_id = new_obj.id
+                    self.tracked_objects[new_obj.id] = new_obj
+                    self.all_objects[new_obj.id] = new_obj # track all over time
+
+                self.tracked_objects[to_update_id].update(new_obj.contour, next_frame_points)
+                self.tracked_objects[to_update_id].add_points_time(pcl, times[frame])
+
+            if draw_objects:
+                for obj in self.tracked_objects.values():
+                    imgs[frame] = cv.drawContours(imgs[frame], [obj.contour], -1, (255, 0, 0), 4)
+                    imgs[frame] = cv.putText(imgs[frame], str(obj.id), tuple(obj.contour[0][0]), cv.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
 
         return dynamic_mask, orig_dynamic_mask
     
@@ -63,6 +68,7 @@ class DynamicObjectTracker:
         coords_3d_frame: (H*W, 3)
         """
         objects = []
+        pointclouds = []
         for contour in contours:
             if len(contour) < 3: continue
             mask = np.zeros((self.H, self.W), dtype=np.uint8)
@@ -72,8 +78,9 @@ class DynamicObjectTracker:
             obj = DynamicObjectTrack(self._id, contour, mask, points)
             self._id += 1
             objects.append(obj)
+            pointclouds.append(points)
 
-        return objects
+        return objects, pointclouds
 
     def remove_dynamic_objects(self, to_remove_ids):
         for id_ in to_remove_ids:
@@ -110,17 +117,39 @@ class DynamicObjectTracker:
 
         return mask, orig_mask
     
+    def pre_pickle(self):
+        for obj in self.all_objects.values():
+            obj.pre_pickle()
+    
+    def save_all_objects_to_pickle(self, file_path):
+        self.pre_pickle()
+        with open(file_path, 'wb') as f:
+            pickle.dump(list(self.all_objects.values()), f)
+    
 
 class DynamicObjectTrack:
     def __init__(self, id_, contour, mask, points):
         self.id = id_
         self.mask = mask
         self.o3d = o3d.geometry.PointCloud()
+        self.points_list = []
+        self.times = []
         self.update(contour, points)
 
     def update(self, contour, points):
         self.contour = contour
+        self.points = points
         self.o3d.points = o3d.utility.Vector3dVector(points)
+
+    def add_points_time(self, points, time):
+        self.points_list.append(points)
+        self.times.append(time)
+
+    def pre_pickle(self):
+        del self.points
+        del self.o3d
+        del self.mask
+        del self.contour
 
     @classmethod
     def chamfer_distance(cls, obj1, obj2):

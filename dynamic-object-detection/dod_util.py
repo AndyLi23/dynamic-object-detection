@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from collections import defaultdict
 import cv2 as cv
 import os
 import torch
@@ -12,8 +11,8 @@ def global_nearest_neighbor(data1: list, data2: list, cost_fn: callable, max_cos
     Args:
         data1 (list): List of first data items
         data2 (list): List of second data items
-        similarity_fun (callable(item1, item2)): Evaluates the similarity between two items
-        min_similarity (float): Minimum similarity required to associate two items
+        cost_fn (callable(item1, item2)): Function to compute the cost of associating two objects
+        max_cost (float): Maximum cost to consider association
 
     Returns:
         a dictionary d such that d[i] = j means that data2[i] is associated with data1[j]
@@ -34,7 +33,8 @@ def global_nearest_neighbor(data1: list, data2: list, cost_fn: callable, max_cos
 
     row_ind, col_ind = linear_sum_assignment(hungarian_cost)
 
-    assignment = defaultdict(lambda: None)
+    assignment = {}
+
     for idx1, idx2 in zip(row_ind, col_ind):
         if idx1 < len1 and idx2 < len2:
             assignment[idx2] = idx1
@@ -48,15 +48,15 @@ def global_nearest_neighbor_dynamic_objects(tracked_objects: dict, new_objects: 
     Args:
         tracked_objects (dict): Dictionary of tracked objects
         new_objects (list): List of new objects
-        cost_fn (callable): Function to compute the cost between two objects
-        max_cost (float): Maximum cost for association
+        cost_fn (callable): Function to compute the cost of associating two objects
+        max_cost (float): Maximum cost to consider association
 
     Returns:
-        a dictionary d such that d[i] = j means that new_objects[i] is associated with tracked_objects[j]
+        a dictionary d such that d[i] = j means that new_object with id i is associated with tracked_object with id j
     """
     tracked_objects_list = list(tracked_objects.values())
     assignment = global_nearest_neighbor(tracked_objects_list, new_objects, cost_fn, max_cost)
-    id_assignment = {new_objects[i].id : tracked_objects[j].id for i, j in assignment.items()}
+    id_assignment = {new_objects[i].id : tracked_objects_list[j].id for i, j in assignment.items()}
     return id_assignment
 
 

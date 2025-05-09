@@ -10,7 +10,7 @@ import os
 import torch
 import gc
 import cv2 as cv
-from dodutil import copy_params_file, preprocess_depth, compute_relative_poses
+from dod_util import copy_params_file, preprocess_depth, compute_relative_poses
 
 
 if __name__ == '__main__':
@@ -87,6 +87,7 @@ if __name__ == '__main__':
             batch_depth_imgs_np[:-1],
             coords_3d,
             raft_coords_3d_1,
+            times=times[index:batch_end],
             draw_objects=params.viz_params.viz_dynamic_object_masks,
         )
 
@@ -102,3 +103,4 @@ if __name__ == '__main__':
 
     viz.end()
     copy_params_file(parent_dir, params, args)
+    tracker.save_all_objects_to_pickle(os.path.join(parent_dir, f'{os.path.basename(params.output)}_objects.pkl'))
