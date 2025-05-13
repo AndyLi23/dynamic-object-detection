@@ -22,17 +22,17 @@
 	.content-margin-container {
 		display: flex;
 		width: 100%; /* Ensure the container is full width */
-		justify-content: left; /* Horizontally centers the children in the container */
+		justify-content: center; /* Horizontally centers the children in the container */
 		align-items: center;  /* Vertically centers the children in the container */
 	}
 
 	.main-content-block {
-		width: 70%; /* Change this percentage as needed */
-    max-width: 1100px; /* Optional: Maximum width */
+		width: 80%; /* Change this percentage as needed */
+    	max-width: 1100px; /* Optional: Maximum width */
 		background-color: #fff;
 		border-left: 1px solid #DDD;
 		border-right: 1px solid #DDD;
-		padding: 8px 8px 8px 8px;
+		padding: 8px 30px 8px 30px;
 		font-family: 'Garamond', serif;
 		line-height: 1.5;
 	}
@@ -51,7 +51,7 @@
 			font-family: 'Garamond', serif;
 			line-height: 1.5;
 			font-size: 14px;
-			width: 25%; /* Change this percentage as needed */
+			width: 5%; /* Change this percentage as needed */
 			max-width: 256px; /* Optional: Maximum width */
 			position: relative;
 			text-align: left;
@@ -242,7 +242,6 @@
             <img src="./images/your_image_here.png" width=512px/>
 		    </div>
 		    <div class="margin-right-block">
-						Caption for the image.
 		    </div>
 		</div>
 
@@ -283,7 +282,6 @@
 			</p>
 		    </div>
 		    <div class="margin-right-block">
-						Margin note that clarifies some detail #main-content-block for intro section.
 		    </div>
 	</div>
 
@@ -327,7 +325,6 @@
 		
 		</div>
 		<div class="margin-right-block">
-					Margin note that clarifies some detail #main-content-block for intro section.
 		</div>
 	</div>
 
@@ -396,13 +393,15 @@
 
 				\[ [\delta_x, \delta_y] = p_{2,z} ([u'_{dynamic}, v'_{dynamic}] - [u', v']) \cdot [\frac{1}{f_x}, \frac{1}{f_y}] \]
 
-				This gives us \( v=\| \delta_x, \delta_y \| \) as an estimate for the velocity of the 3D point corresponding to each pixel. We can mask areas of the image with
+				This assumption works reasonably well in practice, although it is not effective at detecting objects moving along the camera Z axis.
+				<br><br>
+				Finally, given \( v=\| \delta_x, \delta_y \| \) as an estimate for the velocity of the 3D point corresponding to each pixel, we can mask areas of the image with
 				\( v \) higher than a set threshold to obtain masks of dynamic objects in frame 1.
 
 				
 			</p>
 			<h4>Prototype</h4>
-			<p>Below is a video of our prototype of this method, where the bottom image shows flow residual magnitudes masked by the velocity threshold, which are pixels likely to be dynamic objects. 
+			<p>Below is a video of our prototype of this method running on data from Kimera-Multi (@Juan please cite), where the bottom image shows flow residual magnitudes masked by the velocity threshold. 
 				To track the motion of dynamic objects across frames we first fed the residuals to the point tracking algorithm from, <a href="#ref_7">[7]</a>.
 				However, this introduces unnecessary computation, as RAFT optical flow is accurate enough to estimate the motion of each obstacle between the current and next frame.
 				The details are discussed below.</p>
@@ -410,13 +409,15 @@
 				We also prototyped a method which uses the 3D residual between the optical flow predicted pointcloud and the odometry predicted pointcloud instead. It was much more noisy,
 				so we used flow residuals for our final method. See the appendix below for details.
 			</p>
-			<video class='my-video' loop autoplay muted style="width: 300px">
-				<source src="./videos/kimera/kimera_walk_og.mp4" type="video/mp4">
-			</video>
-			<video class='my-video' loop autoplay muted style="width: 300px">
-				<source src="./videos/kimera/walk_masked_pt.mp4" type="video/mp4">
-			</video>
-			<h4>Final Method</h4>
+			<div style="display: flex; justify-content: center; align-items: center; gap: 0;">
+				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%; margin: 0;">
+					<source src="./videos/kimera/kimera_walk_og.mp4" type="video/mp4">
+				</video>
+				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%; margin: 0;">
+					<source src="./videos/kimera/walk_masked_pt.mp4" type="video/mp4">
+				</video>
+			</div>
+			<h4>Final Algorithm</h4>
 			<p>
 				We implemented the above method in a pipeline that works with standard ROS bags as input data, with flow and residuals computed in batches using PyTorch tensors on GPU 
 				for performance. Once velocity magnitudes are computed from residual flow, we apply a threshold to the velocity magnitudes to obtain a binary mask of dynamic objects.
@@ -428,7 +429,7 @@
 
 				Once we have extracted a processed binary mask for the frame, we use scipy.ndimage.label to label connected components. Each connected component is extracted
 				as a mask and assumed to be a dynamic object. The pixels in the mask are unprojected to get a 3D pointcloud representing the dynamic object. We discard 
-				objects with a max axial variance not within a set range to further remove noise.
+				objects with a maximum axial variance outside a set range to further remove noise.
 			</p>
 			<p>
 				To facilitate tracking, we compute frame-by-frame associations between currently tracked dynamic objects and newly detected dynamic objects.
@@ -443,9 +444,14 @@
 				a set distance apart, so that newly detected objects not close to any currently tracked objects are not matched and become new tracked objects. Otherwise, currently
 				tracked objects are updated with their new detections.
 			</p>
-		    </div>
+			<p>A representative video of our algorithm running on data we collected is shown below. Noise is still present, but much of it is filtered out.</p>
+				<div style="display: flex; justify-content: center; align-items: center; gap: 0;">
+					<video class='my-video' loop autoplay muted style="width: 800px; max-width: 100%; margin: 0;">
+						<source src="./videos/hamilton.mp4" type="video/mp4">
+					</video>
+		    	</div>
+			</div>
 		    <div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
-          Interestingly, Plato also asked if X does Y.
 		    </div>
 	</div>
 
@@ -457,7 +463,6 @@
             In this section we discuss our experiments
 		    </div>
 		    <div class="margin-right-block">
-					A caption for the video could go here.
 		    </div>
 	</div>
 
@@ -469,7 +474,6 @@
 		In this section, we discuss the outcome of our experiments.
 		</div>
 		<div class="margin-right-block">
-				A caption for the video could go here.
 		</div>
 	</div>
 
@@ -485,7 +489,8 @@
 						would better leverage all the available data. 
 						<br><br>
 						A planned extension to this work is to use LiDAR as the source for depth data. This would greatly increase the range and accuracy of depth data, at
-						the cost of sparsity (which could be addressed with stereo camera-LiDAR fusion). 
+						the cost of sparsity (which could be addressed with stereo camera-LiDAR fusion). In addition, it may allow us to use the 3D residual method discussed in the appendix,
+						which can better detect movement in the camera Z axis.
 						<br><br>
 						Despite these shortcomings, our method proves to be a promising approach to the problem of dynamic obstacle tracking. With only odometry and depth camera data, 
 						it demonstrates good performance and runtime on real-world data in certain environments. There appear to be many directions for further work to
