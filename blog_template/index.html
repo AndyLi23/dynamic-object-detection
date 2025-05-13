@@ -370,20 +370,20 @@
 				we can transform the point as follows:
 
 				\[ T_{r2}^{r1} = (T_{world}^{r2})^{-1} \cdot T_{world}^{r1} \]
-				\[ p_2 = T_{r2}^{r1} [p_1^T \dots 1]^T \]
+				\[ p_2 = (T_{odom}^{cam})^{-1} \cdot T_{r2}^{r1} \cdot T_{odom}^{cam} \cdot [p_1^T \dots 1]^T \]
 
 				Finally, we project the point \( p_2 \) into the image plane to get its pixel location in the second frame:
 				\[ [u', v'] = [f_x \frac{p_{2,x}}{p_{2,z}} + c_x, f_y \frac{p_{2,y}}{p_{2,z}} + c_y] \]
 				Where \( f_x, f_y \) are the focal lengths of the camera and \( c_x, c_y \) are the coordinates of the camera center in the image plane.
 
-				The \( [u, v] - [u', v'] \) gives us the geometric optical flow at \( [u, v] \) in frame 1.
+				The (@Andy shouldn't this be flipped?) \( [u, v] - [u', v'] \) gives us the geometric optical flow at \( [u, v] \) in frame 1.
 
 				The key observation is the assumption that \( p_1 \) is static in the 3D scene. If \( p_1 \) moves \( \delta = [\delta_x, \delta_y, \delta_z] \) (in the camera reference frame at frame 2) 
 				between frame 1 and frame 2, we get the following image projection at frame 2:
 
 				\[ [u'_{dynamic}, v'_{dynamic}] = [f_x \frac{p_{2,x} + \delta_x}{p_{2,z} + \delta_z} + c_x, f_y \frac{p_{2,y} + \delta_y}{p_{2,z} + \delta_z} + c_y] \]
 
-				Then the geometric optical flow at \( [u, v] \) in frame 1 is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
+				Then the geometric optical flow at \( [u, v] \) in frame 1 is (@Andy, isn't this the residual?) \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
 
 				Since RAFT estimates the actual observed optical flow from frame 1 to frame 2, it will return an optical flow close to \( [u'_{dynamic}, v'_{dynamic}] - [u, v] \) at \( [u, v] \).
 				Then, the residual at that pixel is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
@@ -401,7 +401,7 @@
 				
 			</p>
 			<h4>Prototype</h4>
-			<p>Below is a video of our prototype of this method running on data from Kimera-Multi (@Juan please cite), where the bottom image shows flow residual magnitudes masked by the velocity threshold. 
+			<p>Below is a video of our prototype of this method running on data from Kimera-Multi, <a href="#ref_10">[10]</a>, where the right image shows flow residual magnitudes masked by the velocity threshold. 
 				To track the motion of dynamic objects across frames we first fed the residuals to the point tracking algorithm from, <a href="#ref_7">[7]</a>.
 				However, this introduces unnecessary computation, as RAFT optical flow is accurate enough to estimate the motion of each obstacle between the current and next frame.
 				The details are discussed below.</p>
@@ -492,6 +492,10 @@
 						the cost of sparsity (which could be addressed with stereo camera-LiDAR fusion). In addition, it may allow us to use the 3D residual method discussed in the appendix,
 						which can better detect movement in the camera Z axis.
 						<br><br>
+						A major limitation of this method is that under high accelerations, the RAFT and geometric flow significantly diverge, leading to underwhelming results during UAV flights. 
+						This might be attributed to RAFT not generalizing well to high speed camera motion. Performing transfer learning on RAFT  with labeled high speed flight data 
+						is a promising direction of future work. 
+						<br><br>
 						Despite these shortcomings, our method proves to be a promising approach to the problem of dynamic obstacle tracking. With only odometry and depth camera data, 
 						it demonstrates good performance and runtime on real-world data in certain environments. There appear to be many directions for further work to
 						improve robustness, efficency, and generalization.
@@ -513,8 +517,10 @@
 							<a id="ref_5"></a>[5] <a href="https://www.science.org/doi/full/10.1126/scirobotics.aaz9712">Falanga, D., Kleber, K., & Scaramuzza, D. (2020). Dynamic obstacle avoidance for quadrotors with event cameras. Science Robotics, 5(40), eaaz9712. </a><br><br>
 							<a id="ref_6"></a>[6] <a href="https://ieeexplore.ieee.org/abstract/document/6564752">Chao, H., Gu, Y., & Napolitano, M. (2013, May). A survey of optical flow techniques for UAV navigation applications. In 2013 International Conference on Unmanned Aircraft Systems (ICUAS) (pp. 710-716). IEEE. </a><br><br>
 							<a id="ref_7"></a>[7] <a href="https://link.springer.com/chapter/10.1007/978-3-031-73033-7_2">Karaev, N., Rocco, I., Graham, B., Neverova, N., Vedaldi, A., & Rupprecht, C. (2024, September). Cotracker: It is better to track together. In European Conference on Computer Vision (pp. 18-35). Cham: Springer Nature Switzerland. </a><br><br>
+							<a id="ref_7"></a>[7] <a href="https://link.springer.com/chapter/10.1007/978-3-031-73033-7_2">Karaev, N., Rocco, I., Graham, B., Neverova, N., Vedaldi, A., & Rupprecht, C. (2024, September). Cotracker: It is better to track together. In European Conference on Computer Vision (pp. 18-35). Cham: Springer Nature Switzerland. </a><br><br>
 							<a id="ref_8"></a>[8] <a href="https://arxiv.org/abs/2404.15259">Smith, C., Charatan, D., Tewari, A., & Sitzmann, V. (2024). Flowmap: High-quality camera poses, intrinsics, and depth via gradient descent. arXiv preprint arXiv:2404.15259.</a><br><br>
-							<a id="ref_9"></a>[9] <a href="https://link.springer.com/chapter/10.1007/978-3-030-58536-5_24">Teed, Z., & Deng, J. (2020). Raft: Recurrent all-pairs field transforms for optical flow. In Computer Vision-ECCV 2020: 16th European Conference, Glasgow, UK, August 23–28, 2020, Proceedings, Part II 16 (pp. 402-419). Springer International Publishing. </a><br><br>
+							<a id="ref_9"></a>[9] <a href="https://link.springer.com/chapter/10.1007/978-3-030-58536-5_24">Teed, Z., & Deng, J. (2020). Raft: Recurrent all-pairs field transforms for optical flow. In Computer Vision-ECCV 2020: 16th European Conference, Glasgow, UK, August 23-28, 2020, Proceedings, Part II 16 (pp. 402-419). Springer International Publishing. </a><br><br>
+							<a id="ref_10"></a>[10] <a href="https://ieeexplore.ieee.org/abstract/document/9686955">Tian, Y., Chang, Y., Arias, F. H., Nieto-Granda, C., How, J. P., & Carlone, L. (2022). Kimera-multi: Robust, distributed, dense metric-semantic slam for multi-robot systems. IEEE Transactions on Robotics, 38(4). </a><br><br>
 						</div>
 		    </div>
 		    <div class="margin-right-block">
