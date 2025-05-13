@@ -19,9 +19,13 @@ def global_nearest_neighbor(data1: list, data2: list, cost_fn: callable, max_cos
     """
     len1 = len(data1)
     len2 = len(data2)
+    if len1 == 0 or len2 == 0: return {}
+
     # Augment cost to add option for no associations
-    hungarian_cost = np.ones((2*len1, 2*len2))
+    hungarian_cost = np.zeros((len1, len2))
     M = 1e9
+
+    max_used_score = -float('inf')
 
     for i in range(len1):
         for j in range(len2):
@@ -29,7 +33,16 @@ def global_nearest_neighbor(data1: list, data2: list, cost_fn: callable, max_cos
             
             if max_cost is not None and score > max_cost:
                 score = M
+            else:
+                max_used_score = max(max_used_score, score)
             hungarian_cost[i,j] = score
+
+    if max_used_score == -float('inf'):
+        max_used_score = 1
+
+    expanded_cost = np.full((2 * len1, 2 * len2), max_used_score)
+    expanded_cost[:len1, :len2] = hungarian_cost
+    hungarian_cost = expanded_cost
 
     row_ind, col_ind = linear_sum_assignment(hungarian_cost)
 
@@ -40,26 +53,6 @@ def global_nearest_neighbor(data1: list, data2: list, cost_fn: callable, max_cos
             assignment[idx2] = idx1
 
     return assignment
-
-def global_nearest_neighbor_dynamic_objects(tracked_objects: dict, new_objects: list, cost_fn: callable, max_cost: float=None):
-    """
-    Associates tracked objects with new objects using the global nearest neighbor algorithm.
-
-    Args:
-        tracked_objects (dict): Dictionary of tracked objects
-        new_objects (list): List of new objects
-        cost_fn (callable): Function to compute the cost of associating two objects
-        max_cost (float): Maximum cost to consider association
-
-    Returns:
-        a dictionary d such that d[i] = j means that new_object with id i is associated with tracked_object with id j
-    """
-    tracked_objects_list = list(tracked_objects.values())
-    assignment = global_nearest_neighbor(tracked_objects_list, new_objects, cost_fn, max_cost)
-    id_assignment = {new_objects[i].id : tracked_objects_list[j].id for i, j in assignment.items()}
-    return id_assignment
-
-
 
 def copy_params_file(parent_dir, params, args):
     params_copy_path = os.path.join(parent_dir, f'{os.path.basename(params.output)}.yaml')
@@ -87,3 +80,15 @@ def compute_relative_poses(poses):
     T_1_0 = pose1_inv @ pose0                                                                           # (N, 4, 4)      
 
     return T_1_0
+
+def remove_nan_points(points):
+    return points[~np.isnan(points).any(axis=1)]
+
+def transform_points(T_w_frame, points):
+    """
+    Transform points from camera frame to worlod frame
+    T_w_frame: (4, 4)
+    points: (N, 3)
+    """
+    points_h = np.hstack((points, np.ones((points.shape[0], 1))))
+    return (T_w_frame @ points_h.T)[:3].T

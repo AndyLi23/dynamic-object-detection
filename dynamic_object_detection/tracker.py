@@ -1,9 +1,30 @@
 import cv2 as cv
 import numpy as np
-import open3d as o3d
 
-from dynamic_object_detection.dod_util import global_nearest_neighbor_dynamic_objects
+from dynamic_object_detection.dod_util import global_nearest_neighbor, remove_nan_points, transform_points
 import pickle
+from scipy.ndimage import label
+
+OVERLAY = np.array([0, 0, 255], dtype=np.uint8)
+
+def global_nearest_neighbor_dynamic_objects(tracked_objects: dict, new_objects: list, cost_fn: callable, max_cost: float=None):
+    """
+    Associates tracked objects with new objects using the global nearest neighbor algorithm.
+
+    Args:
+        tracked_objects (dict): Dictionary of tracked objects
+        new_objects (list): List of new objects
+        cost_fn (callable): Function to compute the cost of associating two objects
+        max_cost (float): Maximum cost to consider association
+
+    Returns:
+        a dictionary d such that d[i] = j means that new_object with id i is associated with tracked_object with id j
+    """
+    tracked_objects_list = list(tracked_objects.values())
+    assignment = global_nearest_neighbor(tracked_objects_list, new_objects, cost_fn, max_cost)
+    id_assignment = {new_objects[i].id : tracked_objects_list[j].id for i, j in assignment.items()}
+    return id_assignment
+
 
 class DynamicObjectTracker:
     def __init__(self, params, depth_camera_params, effective_fps):
@@ -31,22 +52,26 @@ class DynamicObjectTracker:
 
         for frame in range(len(imgs)):
             
-            contours, _ = cv.findContours(dynamic_mask[frame].astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+            labeled_mask, num_features = label(dynamic_mask[frame], structure=[[0,1,0],[1,1,1],[0,1,0]])
 
-            new_objects, world_pointclouds = self.contours_to_objects(contours, coords_3d[frame], cam_poses[frame])
+            new_objects = self.labeled_mask_to_objects(labeled_mask, num_features, coords_3d[frame], cam_poses[frame])
 
             associations = global_nearest_neighbor_dynamic_objects(
                 tracked_objects=self.tracked_objects, 
                 new_objects=new_objects, 
-                cost_fn=DynamicObjectTrack.chamfer_distance, 
-                max_cost=self.params.max_chamfer_distance,
+                cost_fn=DynamicObjectTrack.distance, 
+                max_cost=self.params.max_merge_dist,
             )
+
+            # print(f'{len(new_objects)} new objects, {len(self.tracked_objects)} tracked objects, {len(associations)} associated')
 
             to_remove_ids = [obj.id for obj in self.tracked_objects.values() if obj.id not in associations.values()]
             self.remove_dynamic_objects(to_remove_ids)
 
-            for new_obj, wpcl in zip(new_objects, world_pointclouds):
-                next_frame_points = raft_coords_3d_1[frame][new_obj.mask]
+            for new_obj in new_objects:
+                next_frame_points = remove_nan_points(raft_coords_3d_1[frame][new_obj.mask])
+                if len(next_frame_points) == 0: next_frame_points = new_obj.points # backup: use old points
+
                 if new_obj.id in associations:
                     to_update_id = associations[new_obj.id]
                 else:
@@ -54,37 +79,56 @@ class DynamicObjectTracker:
                     self.tracked_objects[new_obj.id] = new_obj
                     self.all_objects[new_obj.id] = new_obj # track all over time
 
-                self.tracked_objects[to_update_id].update(new_obj.contour, next_frame_points)
-                self.tracked_objects[to_update_id].add_points_time(wpcl, times[frame])
+                self.tracked_objects[to_update_id].update_trajectory(new_obj.cur_point, times[frame]) # add to tracked object trajectory
+                self.tracked_objects[to_update_id].update(new_obj.mask, next_frame_points) # propogate to next frame for association
+
+            mask = np.zeros((self.H, self.W), dtype=bool)
 
             if draw_objects:
                 for obj in self.tracked_objects.values():
-                    imgs[frame] = cv.drawContours(imgs[frame], [obj.contour], -1, (255, 0, 0), 4)
-                    imgs[frame] = cv.putText(imgs[frame], str(obj.id), tuple(obj.contour[0][0]), cv.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+                    obj_mask = obj.mask.reshape((self.H, self.W)).astype(np.uint8)
+                    mask = np.logical_or(mask, obj_mask)
+                    obj_mask_center = np.mean(np.argwhere(obj_mask > 0), axis=0).astype(int)
+                    imgs[frame] = cv.putText(imgs[frame], str(obj.id), (obj_mask_center[1], obj_mask_center[0]), cv.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+
+                imgs[frame][mask] = imgs[frame][mask] * 0.5 + OVERLAY * 0.5
 
         return dynamic_mask, orig_dynamic_mask
     
-    def contours_to_objects(self, contours, coords_3d_frame, cam_pose):
+    def labeled_mask_to_objects(self, labeled_mask, num_features, coords_3d_frame, cam_pose):
         """
-        contours: List
+        labeled_mask: (H, W)
         coords_3d_frame: (H*W, 3)
         """
         objects = []
-        world_pointclouds = []
-        for contour in contours:
-            if len(contour) < 3: continue
-            mask = np.zeros((self.H, self.W), dtype=np.uint8)
-            cv.fillPoly(mask, [contour], 1)
-            mask = mask.reshape((-1)).astype(bool)
-            points = coords_3d_frame[mask] 
-            obj = DynamicObjectTrack(self._id, contour, mask, points)
+        for i in range(1, num_features + 1):
+            mask = (labeled_mask == i).reshape((-1)).astype(bool)
+            points = remove_nan_points(coords_3d_frame[mask])
+
+            if len(points) == 0: continue
+            if self.bad_dynamic_object_check(points): continue
+
+            obj = DynamicObjectTrack(self._id, mask, points)
             self._id += 1
             objects.append(obj)
 
-            world_points = self.transform_points(cam_pose, points)
-            world_pointclouds.append(world_points)
+        return objects
+    
+    def bad_dynamic_object_check(self, points):
+        centered_points = points - points.mean(axis=0)
+        cov = np.cov(centered_points.T)
 
-        return objects, world_pointclouds
+        # print(f'cov: {cov}')
+
+        # import open3d as o3d
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(points)
+        # axes = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0, origin=[0, 0, 0])
+        # o3d.visualization.draw_geometries([pcd, axes])
+
+        if self.params.max_3d_std_dev is not None and np.sqrt(np.max(cov.diagonal())) > self.params.max_3d_std_dev: return True
+        if self.params.min_3d_std_dev is not None and np.sqrt(np.max(cov.diagonal())) < self.params.min_3d_std_dev: return True
+        
 
     def remove_dynamic_objects(self, to_remove_ids):
         for id_ in to_remove_ids:
@@ -121,36 +165,25 @@ class DynamicObjectTracker:
 
         return mask, orig_mask
     
-    def transform_points(self, T_w_frame, points):
-        """
-        Transform points from camera frame to worlod frame
-        T_w_frame: (4, 4)
-        points: (N, 3)
-        """
-        points_h = np.hstack((points, np.ones((points.shape[0], 1))))
-        return (T_w_frame @ points_h.T)[:3].T
-    
     def save_all_objects_to_pickle(self, file_path):
         with open(file_path, 'wb') as f:
             pickle.dump({obj.id : obj.to_dict() for obj in self.all_objects.values()}, f)
     
 
 class DynamicObjectTrack:
-    def __init__(self, id_, contour, mask, points):
+    def __init__(self, id_, mask, points):
         self.id = id_
-        self.mask = mask
-        self.o3d = o3d.geometry.PointCloud()
         self.points_list = []
         self.times = []
-        self.update(contour, points)
+        self.update(mask, points)
 
-    def update(self, contour, points):
-        self.contour = contour
+    def update(self, mask, points):
+        self.mask = mask
+        self.cur_point = np.mean(points, axis=0) # centroid
         self.points = points
-        self.o3d.points = o3d.utility.Vector3dVector(points)
 
-    def add_points_time(self, points, time):
-        self.points_list.append(points)
+    def update_trajectory(self, cur_point, time):
+        self.points_list.append(cur_point)
         self.times.append(time)
 
     def to_dict(self):
@@ -161,10 +194,5 @@ class DynamicObjectTrack:
         }
 
     @classmethod
-    def chamfer_distance(cls, obj1, obj2):
-        # Compute Chamfer Distance between 3d points
-        dist1 = np.mean(obj1.o3d.compute_point_cloud_distance(obj2.o3d))
-        dist2 = np.mean(obj2.o3d.compute_point_cloud_distance(obj1.o3d))
-
-        chamfer_distance = min(dist1, dist2)
-        return chamfer_distance
+    def distance(cls, obj1, obj2):
+        return np.linalg.norm(obj1.cur_point - obj2.cur_point)

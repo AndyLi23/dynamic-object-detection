@@ -20,8 +20,7 @@ class OpticalFlowVisualizer:
         matplotlib.use('Agg')
 
         fourcc = cv.VideoWriter_fourcc(*'XVID')
-        self.plt_shape = self.params.viz_flags.shape
-        self.figsize = (self.params.vid_dims[0] / PLT_DPI, self.params.vid_dims[1] / PLT_DPI)
+        self.output_shape = self.params.viz_flags.shape
         self.output_file = output
         self.video_writer = cv.VideoWriter(output, fourcc, fps, self.params.vid_dims)
 
@@ -29,44 +28,42 @@ class OpticalFlowVisualizer:
         if not self.params.viz_video: return
 
         for frame in range(len(image)):
-            fig, axes = plt.subplots(self.plt_shape[0], self.plt_shape[1], figsize=self.figsize)
+            frame_canvas = np.zeros((self.params.vid_dims[1], self.params.vid_dims[0], 3), dtype=np.uint8)
 
-            for i, j in product(range(self.plt_shape[0]), range(self.plt_shape[1])):
+            for i, j in product(range(self.output_shape[0]), range(self.output_shape[1])):
                 name = self.params.viz_flag_names[self.params.viz_flags[i][j]]
 
+                x_offset = j * (self.params.vid_dims[0] // self.output_shape[1])
+                y_offset = i * (self.params.vid_dims[1] // self.output_shape[0])
+                width = self.params.vid_dims[0] // self.output_shape[1]
+                height = self.params.vid_dims[1] // self.output_shape[0]
+
                 if name == 'image':
-                    axes[i][j].imshow(image[frame])
-                    axes[i][j].set_title("Image")
+                    resized_image = cv.resize(image[frame], (width, height))
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_image
                 elif name == 'depth':
-                    axes[i][j].imshow(depth[frame], cmap='gray')
-                    axes[i][j].set_title("Depth")
+                    depth_colored = cv.applyColorMap(cv.normalize(depth[frame], None, 0, 255, cv.NORM_MINMAX).astype(np.uint8), cv.COLORMAP_JET)
+                    resized_depth = cv.resize(depth_colored, (width, height))
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_depth
                 elif name == 'dynamic mask':
-                    axes[i][j].imshow(dynamic_mask[frame], cmap='gray')
-                    axes[i][j].set_title("Dynamic Mask")
+                    dynamic_colored = cv.cvtColor((dynamic_mask[frame] * 255).astype(np.uint8), cv.COLOR_GRAY2BGR)
+                    resized_dynamic = cv.resize(dynamic_colored, (width, height))
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_dynamic
                 elif name == 'orig_dynamic_mask':
-                    axes[i][j].imshow(orig_dynamic_masks[frame], cmap='gray')
-                    axes[i][j].set_title("Original Dynamic Mask")
+                    orig_dynamic_colored = cv.cvtColor((orig_dynamic_masks[frame] * 255).astype(np.uint8), cv.COLOR_GRAY2BGR)
+                    resized_orig_dynamic = cv.resize(orig_dynamic_colored, (width, height))
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_orig_dynamic
                 elif name == 'raft flow':
-                    axes[i][j].imshow(OpticalFlowVisualizer.viz_optical_flow_img(raft_flow[frame]))
-                    axes[i][j].set_title("RAFT Optical Flow")
+                    flow_image = OpticalFlowVisualizer.viz_optical_flow_img(raft_flow[frame])
+                    resized_flow = cv.resize(flow_image, (width, height))
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_flow
                 elif name == 'residual':
-                    im = axes[i][j].imshow(residual[frame], cmap='hot', vmin=0, vmax=self.params.viz_max_residual_magnitude)
-                    axes[i][j].set_title("Magnitude Residual")
-                    cbar = fig.colorbar(im, ax=axes[i][j], orientation='vertical', fraction=0.046, pad=0.04)
-                    cbar.set_label("Scale")
+                    residual_normalized = np.clip(residual[frame] / self.params.viz_max_residual_magnitude, 0, 1)
+                    residual_colored = cv.applyColorMap((residual_normalized * 255).astype(np.uint8), cv.COLORMAP_HOT)
+                    resized_residual = cv.resize(residual_colored, (width, height))
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_residual
 
-            fig.tight_layout()
-            fig.canvas.draw()
-            buf = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8)
-            buf = buf.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-            buf = buf[:, :, [1, 2, 3]]  # Convert ARGB to RGB by dropping the alpha channel
-            vid_frame = cv.cvtColor(buf, cv.COLOR_RGB2BGR)
-            vid_frame = cv.resize(vid_frame, self.params.vid_dims)
-            self.video_writer.write(vid_frame)
-
-            plt.close(fig)
-            del fig, axes, buf, vid_frame
-            gc.collect()
+            self.video_writer.write(frame_canvas)
 
     def end(self):
         if not self.params.viz_video: return

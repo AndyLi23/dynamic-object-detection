@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 from os.path import expanduser, expandvars
 from robotdatapy.data import PoseData, ImgData
+from robotdatapy.transform import T_FLURDF, T_RDFFLU
 from functools import cached_property
 from typing import Tuple
 import os
@@ -26,6 +27,13 @@ def find_transformation(bag_path, param_dict) -> np.array:
         return T
     elif param_dict['input_type'] == 'matrix':
         return np.array(param_dict['matrix']).reshape((4, 4))
+    elif param_dict['input_type'] == 'string':
+        if param_dict['string'] == 'T_FLURDF':
+            return T_FLURDF
+        elif param_dict['string'] == 'T_RDFFLU':
+            return T_RDFFLU
+        else:
+            raise ValueError("Invalid string.")
     else:
         raise ValueError("Invalid input type.")
 
@@ -71,6 +79,7 @@ class PoseDataParams:
         T_odom_camera_dict = params_dict['T_odom_camera'] \
             if 'T_odom_camera' in params_dict else None
         T_odom_camera = find_transformation(params_dict_subset['path'], T_odom_camera_dict) if T_odom_camera_dict is not None else np.eye(4)
+        params_dict['T_postmultiply'] = T_odom_camera
         return cls(params_dict=params_dict_subset,
                    T_odom_camera=T_odom_camera)
         
@@ -82,11 +91,10 @@ class PoseDataParams:
         for k, v in params_dict.items():
             if type(v) == str:
                 params_dict[k] = expandvars_recursive(v)
+
         pose_data = PoseData.from_dict(params_dict)
         return pose_data
-    
-    def _find_transformation(self, tf_dict) -> np.array:
-        return find_transformation(self.params_dict["path"], tf_dict)
+
 
 @dataclass
 class RaftArgs:
@@ -122,11 +130,13 @@ class RaftParams:
 class TrackingParams:
     min_vel_threshold: float
     vel_threshold_gain: float
-    gaussian_smoothing: bool
-    gaussian_kernel_size: int
     post_processing: list
-    max_chamfer_distance: float
-    
+    max_merge_dist: float
+    gaussian_smoothing: bool = False
+    gaussian_kernel_size: int = 0
+    min_3d_std_dev: float = None
+    max_3d_std_dev: float = None
+
     @classmethod
     def from_dict(cls, params_dict):
         return cls(**params_dict)

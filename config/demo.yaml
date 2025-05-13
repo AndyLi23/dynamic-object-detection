@@ -1,29 +1,16 @@
-# KMD demo configuration file
-# required environment variables:
-#   KMD: path to the KMD directory root (parent directory of /hybrid, /outdoor, etc.)
-#   RAFT: path to root of RAFT repository
-#   RAFT_MODEL: name of the RAFT model (e.g. 'raft-sintel')
-
-# optional environment variables:
-#   KMD_ENV: KMD environment (e.g. 'hybrid', 'outdoor')
-#   ROBOT: name of the robot (e.g. 'thoth')
-#   RAFT_MODEL: name of the RAFT model (e.g. 'raft-sintel')
-# will be overriden by this config file if the following are set:
-kmd_env: hybrid
-robot: sparkal1
 raft_model: raft-sintel
 
 use_3d: False
 
 # device/batch size for raft & geometric optical flow
 device: cuda
-batch_size: 24
+batch_size: 18
 
-original_fps: 30
+original_fps: 15
 # run once every `skip_frames` frames
-skip_frames: 5
+skip_frames: 2
 
-output: 'out/global_save_p25'
+output: 'out/highbay_test_5'
 
 raft:
   path: ${RAFT}/core/
@@ -32,36 +19,36 @@ raft:
 
 time:
   relative: true
-  # t0: 40
-  # tf: 80
+  t0: 120
+  tf: 130
   # t0: 915
   # tf: 930
-  t0: 695
+  # t0: 20
   # t0: 715
-  tf: 750
+  # tf: 750
 
 img_data:
-  path: "${KMD}/${KMD_ENV}/bags/${ROBOT}.bag"
-  topic: /${ROBOT}/forward/color/image_raw/compressed
-  camera_info_topic: /${ROBOT}/forward/color/camera_info
-  compressed: True
+  path: "~/Downloads/cv_bag2"
+  topic: /camera/camera/color/image_raw
+  camera_info_topic: /camera/camera/color/camera_info
+  compressed: False
   
 depth_data:
-  path: "${KMD}/${KMD_ENV}/bags/${ROBOT}.bag"
-  topic: /${ROBOT}/forward/depth/image_rect_raw
-  camera_info_topic: /${ROBOT}/forward/depth/camera_info
+  path: "~/Downloads/cv_bag2"
+  topic: /camera/camera/depth/image_rect_raw
+  camera_info_topic: /camera/camera/depth/camera_info
   compressed: False
 
   depth_scale: 1000.0
-  max_depth: 15.0
+  max_depth: 10.0
 
   # d, sigmalColor, sigmalSpace. Delete or set to null to disable.
-  bilateral_smooth_depth: [5, 35, 5] # in mm. (before scaling by 1000.0)
+  # bilateral_smooth_depth: [5, 35, 5] # in mm. (before scaling by 1000.0)
 
 pose_data:
   type: bag
-  path: ${KMD}/${KMD_ENV}/kimera_vio/${ROBOT}.bag
-  topic: /${ROBOT}/kimera_vio_ros/odometry
+  path: "~/Downloads/odometry"
+  topic: /BD01/world
   time_tol: 5.0
 
 tracking:
@@ -70,13 +57,14 @@ tracking:
   # then that point is considered dynamic
   # for 2D:
   # approximate 3d residual magnitude = depth * K^-1 * [delta_u, delta_v, 0]
-  min_vel_threshold: 1.5
-  vel_threshold_gain: 0.2
+  min_vel_threshold: 0.5
+  vel_threshold_gain: 0.1
 
   gaussian_smoothing: False
   gaussian_kernel_size: 7
 
-  post_processing: [['open', 9], ['close', 13]]
+  post_processing: []
+  # post_processing: [['open', 3], ['close', 3]]
 
   # maximum chamfer distance for a projected dynamic object & a newly detected
   # dynamic object to be considered for GNN association

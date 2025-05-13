@@ -23,6 +23,13 @@ if __name__ == '__main__':
 
     params = Params.from_yaml(args.params)
 
+
+    parent_dir = os.path.dirname(params.output) if os.path.dirname(params.output) else '.'
+    if not os.path.exists(parent_dir):
+        os.makedirs(parent_dir)
+
+    copy_params_file(parent_dir, params, args)
+
     print('loading raft...')
     raft = RaftWrapper(params.raft_params, params.device)
     print(f'raft loaded with model {params.raft_params.model}')
@@ -33,6 +40,8 @@ if __name__ == '__main__':
     depth_data = params.load_depth_data()
     print('pose, img, depth data loaded')
 
+    # print(len(cam_pose_data.positions))
+
     times = img_data.times[::params.skip_frames]
     N_frames = len(times)
     imgs = np.stack([img_data.img(t) for t in times], axis=0) # (N, H, W, 3)
@@ -41,10 +50,6 @@ if __name__ == '__main__':
     T_1_0 = compute_relative_poses(torch.tensor(cam_poses, dtype=torch.float32, device=params.device)) # (N-1, 4, 4)
 
     print(f'running algorithm on {N_frames} frames from t={times[0]} to t={times[-1]}')
-
-    parent_dir = os.path.dirname(params.output) if os.path.dirname(params.output) else '.'
-    if not os.path.exists(parent_dir):
-        os.makedirs(parent_dir)
 
     effective_fps = params.original_fps / params.skip_frames
 
@@ -93,7 +98,7 @@ if __name__ == '__main__':
             draw_objects=params.viz_params.viz_dynamic_object_masks,
         )
 
-        # # print('writing video frames...')
+        # print('writing video frames...')
         viz.write_batch_frames(
             batch_imgs_np[:-1],
             batch_depth_imgs_np[:-1],
@@ -104,5 +109,4 @@ if __name__ == '__main__':
         )
 
     viz.end()
-    copy_params_file(parent_dir, params, args)
     tracker.save_all_objects_to_pickle(os.path.join(parent_dir, f'{os.path.basename(params.output)}_objects.pkl'))
