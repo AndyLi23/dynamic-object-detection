@@ -17,7 +17,7 @@ class OpticalFlowVisualizer:
         self.params = viz_params
         if not self.params.viz_video: return
 
-        fourcc = cv.VideoWriter_fourcc(*'MP4V')
+        fourcc = cv.VideoWriter_fourcc(*'mp4v')
         self.output_shape = self.params.viz_flags.shape
         self.output_file = output
         self.video_writer = cv.VideoWriter(output, fourcc, fps, self.params.vid_dims)

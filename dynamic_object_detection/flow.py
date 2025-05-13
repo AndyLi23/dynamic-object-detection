@@ -93,7 +93,7 @@ class GeometricOpticalFlow:
         T_1_0: (N, 4, 4)
         """
         N = len(raft_coords_3d_1)
-        assert(N == len(depth_images)-1 == len(T_1_0))
+        assert(N == len(depth_images) == len(T_1_0))
 
         coords_3d, geometric_coords_3d_1 = self.unproject_and_transform(depth_images, T_1_0)                # (N, H*W, 3) 
         

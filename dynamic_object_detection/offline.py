@@ -13,6 +13,9 @@ import time
 import pickle
 from dynamic_object_detection.dod_util import copy_params_file, preprocess_depth, compute_relative_poses
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -56,7 +59,7 @@ if __name__ == '__main__':
     runtimes = []
 
     if params.viz_params.viz_video:
-        viz = OpticalFlowVisualizer(params.viz_params, f'{params.output}.avi', effective_fps)
+        viz = OpticalFlowVisualizer(params.viz_params, f'{params.output}.mp4', effective_fps)
     gof_flow = GeometricOpticalFlow(depth_data.camera_params, device=params.device)
     tracker = DynamicObjectTracker(params.tracking_params, depth_data.camera_params, effective_fps)
 
@@ -100,7 +103,7 @@ if __name__ == '__main__':
             raft_coords_3d_1,
             times=times[index:batch_end],
             cam_poses=cam_poses[index:batch_end],
-            draw_objects=params.viz_params.viz_dynamic_object_masks,
+            draw_objects=params.viz_params.viz_video and params.viz_params.viz_dynamic_object_masks,
         )
 
         runtimes.append(time.time() - start_time)
@@ -116,7 +119,7 @@ if __name__ == '__main__':
                 residual,
             )
 
-    viz.end()
+    if params.viz_params.viz_video: viz.end()
 
 
     out = {

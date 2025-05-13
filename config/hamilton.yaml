@@ -1,4 +1,4 @@
-raft_model: raft-kitti
+raft_model: raft-sintel
 
 use_3d: False
 
@@ -10,12 +10,12 @@ original_fps: 30
 # run once every `skip_frames` frames
 skip_frames: 2
 
-output: 'out/hamilton1'
+output: 'out/hamilton'
 
 raft:
   path: ${RAFT}/core/
   model: ${RAFT}/models/${RAFT_MODEL}.pth
-  iters: 16
+  iters: 12
 
 # time:
   # relative: true
@@ -80,8 +80,8 @@ tracking:
 viz:
   viz_video: True
   viz_dynamic_object_masks: True
-  vid_dims: [1280, 680]
+  vid_dims: [1280, 960]
   viz_flag_names: ['image', 'depth', 'dynamic mask', 'raft flow', 'residual', 'orig_dynamic_mask']
   # must be 2D: each entry i means viz_flag_names[i] will be in the video at the location of i in the grid
-  viz_flags: [[0, 1, 2], [3, 4, 5]]
+  viz_flags: [[0, 2], [1, 4]]
   viz_max_residual_magnitude: 2.0

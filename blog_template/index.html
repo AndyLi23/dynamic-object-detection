@@ -2,6 +2,9 @@
 <head>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script id="MathJax-script" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
 
 <link rel="shortcut icon" href="images/icon.ico">
 <style type="text/css">
@@ -22,6 +25,7 @@
 		justify-content: left; /* Horizontally centers the children in the container */
 		align-items: center;  /* Vertically centers the children in the container */
 	}
+
 	.main-content-block {
 		width: 70%; /* Change this percentage as needed */
     max-width: 1100px; /* Optional: Maximum width */
@@ -29,7 +33,8 @@
 		border-left: 1px solid #DDD;
 		border-right: 1px solid #DDD;
 		padding: 8px 8px 8px 8px;
-		font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;#"Avenir";
+		font-family: 'Garamond', serif;
+		line-height: 1.5;
 	}
 	.margin-left-block {
 			font-size: 14px;
@@ -38,11 +43,13 @@
 			position: relative;
 			margin-left: 10px;
 			text-align: left;
-			font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;#"Avenir";
+			font-family: 'Garamond', serif;
+			line-height: 1.5;
 			padding: 5px;
 	}
 	.margin-right-block {
-			font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;#"Avenir";
+			font-family: 'Garamond', serif;
+			line-height: 1.5;
 			font-size: 14px;
 			width: 25%; /* Change this percentage as needed */
 			max-width: 256px; /* Optional: Maximum width */
@@ -183,8 +190,8 @@
 
 </style>
 
-	  <title>The Platonic Representation Hypothesis</title>
-      <meta property="og:title" content="The Platonic Representation Hypothesis" />
+	  <title>FLOROS</title>
+      <meta property="og:title" content="FLOROS" />
 			<meta charset="UTF-8">
   </head>
 
@@ -197,18 +204,18 @@
 						<table class="header" align=left>
 								<tr>
 									<td colspan=4>
-										<span style="font-size: 32px; font-family: 'Courier New', Courier, monospace; /* Adds fallbacks */">Flow Residuals For Open Set dynamic object tracking (FLOROS)</span>
+										<span style="font-size: 32px; font-family: 'Garamond', serif;">Flow Residuals for Open Set dynamic object tracking (FLOROS)</span>
 									</td>
 								</tr>
 								<tr>
 										<td align=left>
-												<span style="font-size:17px"><a href="your_website">Qingyuan Li</a></span>
+												<span style="font-size:21px"><a href="your_website">Qingyuan Li</a></span>
 										</td>
 										<td align=left>
-												<span style="font-size:17px"><a href="your_partner's_website">Juan Rached</a></span>
+												<span style="font-size:21px"><a href="your_partner's_website">Juan Rached</a></span>
 										</td>
 								<tr>
-									<td colspan=4 align=left><span style="font-size:18px">6.8300 Final Project, MIT</span></td>
+									<td colspan=4 align=left><span style="font-size:18px">MIT 6.8300 Final Project</span></td>
 								</tr>
 						</table>
 					</div>
@@ -260,11 +267,10 @@
 				strong assumption as we live in a dynamic world. Some methods perform dynamic obstacle avoidance by assuming the state of the dynamic obstacle is known at all times. 
 				This is fine in a laboratory setting, where a motion capture system can provide such estimates, but breaks in real world applications. So a scheme for estimating the motion 
 				of dynamic obstacles from sensory input is indispensable if we are to deploy a complete system. Some approaches employ Kalman Filters to recover the position and velocity of the obstacle in the field 
-				of view from a point cloud. But this is either restrictive, you can only robustly plan around vehicles whose dynamics you know, or brittle, if you assume nothing about the obstacles' dynamics. 
-				This problem has also been addressed with vision-based methods, commonly with optical flow. 
+				of view from a point cloud. But this is either restrictive, allowing robust planning only around vehicles with known dynamics, or brittle, if nothing is assumed about the obstacles' dynamics. 
 			</p>
 			<p>
-				There are two core challenges in estimating the motion of obstacles from a moving platform:
+				There are two core challenges in estimating the motion of objects from a moving platform:
 				<ol>
 					<li>Estimating the motion of the scene.</li>
 					<li>Removing the motion of the vehicle attached to the camera.</li>	
@@ -290,9 +296,9 @@
 			In <a href="#ref_1">[1]</a>, Tordesillas et al, propose a fast and safe trajectory planner that plans in known and unknown environments. In other words, it plans within the observed and 
 			unobserved regions of the map. But this approach assumes a static world. In <a href="#ref_2">[2]</a> and <a href="#ref_3">[3]</a> present a multiagent, asynchronous, and decentralized trajectory
 			planner and an extension to mitigate delay checks in hardware deployment. While both <a href="#ref_2">[2]</a> and <a href="#ref_3">[3]</a> can plan in dynamic environments, they assume that the state of the 
-			dynamic obstacles is known. <a href="#ref_4">[4]</a>, a real-time perception-aware trajectory planner for multirotor UAVs, can plan in dynamic environments and does not expect 
-			the state of dynamic obstacles to be given. Instead, <a href="#ref_4">[4]</a> clusters the point clouds produced by an onboard depth sensor and applies the Hungarian algorithm to track 
-			those clusters. <a href="#ref_4">[4]</a>, however, does not work in static scenes, and its point cloud scheme breaks when static obstacles are picked up by the depth sensor as well. 
+			dynamic objects is known. <a href="#ref_4">[4]</a>, a real-time perception-aware trajectory planner for multirotor UAVs, can plan in dynamic environments and does not expect 
+			the state of dynamic objects to be given. Instead, <a href="#ref_4">[4]</a> clusters the point clouds produced by an onboard depth sensor and applies the Hungarian algorithm to track 
+			those clusters. <a href="#ref_4">[4]</a>, however, does not work in static scenes, and its point cloud scheme breaks when static objects are picked up by the depth sensor as well. 
 		</p>
 		
 		<p>		
@@ -306,7 +312,7 @@
 		<p>
 			The fundamental vision-based approach to motion estimation is optical flow, and optical flow methods for UAV applications have been thoroughly studied <a href="#ref_6">[6]</a>. 
 			But standard optical flow struggles with fine motion estimation, particularly at high speeds and in dynamic lighting conditions, making them inadequate for UAV navigation. Additionally, 
-			pure optical flow methods estimate motion between frames, but capture no semantics about the motion and its corresponding obstacle and so struggle to track the obstacles' trajectory along a sequence. 
+			pure optical flow methods estimate motion between frames, but capture no semantics about the motion and its corresponding obstacle and so struggle to track the objects' trajectory along a sequence. 
 			<a href="#ref_7">[7]</a> presents a transformer-based point tracking pipeline that successfully estimates the trajectory of dynamic objects from medium-to-long video sequences. 
 			Estimating obstacle trajectories with point tracking is considerably more robust than with optical flow alone, but <a href="#ref_7">[7]</a> needs a procedure to remove the ego motion of the UAV from the point tracks. 	
 		</p>
@@ -332,15 +338,16 @@
 					<h1>Methods</h1>
 
 			<p>
-				We compute the residuals from RAFT optical flow and the geometric optical flow induced by scene flow. The latter assumes a static scene, so 
-				the residuals substract the flow produced by the motion of the vehicle, capturing only the movement of the obstacles in the scene. Below is a 
+				We compute the residuals from RAFT optical flow and the geometric optical flow induced by scene flow, using solely RGBD and odometry data. The latter assumes a static scene, so 
+				the residuals substract the flow produced by the motion of the vehicle, capturing only the movement of the dynamic objects in the scene. Below is a 
 				detailed discussion on how each of the modules involved in our approach work and the role they play in the pipeline. 
 			</p>
 
+			<h4>Theory</h4>
 			<p>
 				Optical flow assigns pixel correspondences between two frames by solving the optimization problem below: 
 			</p>
-			<img src="./images/flow_objective.png" width=512px/>
+			\[ E = \min_{\mu} \left[ (\nabla^T \mathbf{I}_1\mu - (\mathbf{I}_2-\mathbf{I}_1)^2+\alpha(|\nabla \mu_x|^2+|\nabla \mu_y|^2)) \right] \] 
 			<p>
 				Where the first term enforces correspondences based on the color constancy assumption, which states that the color of each point in the scene does not change between frames, and the second term promotes smooth uniform flow by encouraging each 
 				flow vector to be close to the average of its neighboring vectors. Common pitfalls of classic optical flow include: 
@@ -350,24 +357,58 @@
 				<li>The color constancy assumption is susceptible to blur and changes in lighting conditions.</li>
 			</ol>
 			<p>
-				As a consequence, it has become the norm to substitute the classical optical flow approach with learned models. The most notable of which is 
+				As a consequence, it has become the norm to substitute the classical optical flow approach with learned models, the most notable of which is 
 				RAFT. RAFT extracts per pixel features and builds multi-scale 4D correlation volumes. This rich representation allows the model to generalize 
 				and reduce the effect of lighting changes and blur on the flow estimates. The compact representation makes it so that computing the flow between 
 				each frame is also faster than if solving the original optimization problem. 
 			</p>
 			<p>
-				We obtain our flow residuals by computing the difference between the RAFT optical flow and the geometric optical flow from camera-induced scene flow. As the name implies,
-				we obtain the geometric flow by unprojecting our pixel coordinates into 3D space and then projecting them back at the next frame. As shown in, <a href="#ref_8">[8]</a>, 
-				a camera moving through a static scene induces optical flow in image space. If at each frame, we unproject our pixel coordinates into 3D space, 
-				we retrieve the coordinates of each point of the depth cloud on that frame's reference frame. If we then transform those coordinates to the next frames reference frame, 
-				and project those points onto the second frame's image plane, then we have mapped the pixels on the first frame to their corresponding pixels on the second. Computing the difference
-				between the pixel coordinates produces a flow estimate that only captures the motion of the camera. The difference between this geometric flow and the RAFT optical flow yields 
-				the residuals. 
+				We obtain our flow residuals by computing the difference between the RAFT optical flow and the "geometric optical flow", or optical flow
+				resulting solely from camera-induced scene flow. 
+				<br><br>
+				For each pixel \( [u, v] \) with corresponding depth \( d \) in the first frame, we first unproject the pixel coordinates into 3D space using the depth data and camera intrinsics:
+				\[ p_1=d K^{-1} [u, v, 1]^T \]
+				We assume that \( p_1 \) is static in the 3D scene. We transform the 3D point \( p_1 \), which is in the reference frame of the camera at the frame 1, into the reference frame of the camera at the frame 2. Given that 
+				the robot pose is \( T_{world}^{r1} \) at frame 1 and \( T_{world}^{r2} \) at frame 2, and that the transform between the odometry frame and camera frame is \( T_{odom}^{cam} \), 
+				we can transform the point as follows:
+
+				\[ T_{r2}^{r1} = (T_{world}^{r2})^{-1} \cdot T_{world}^{r1} \]
+				\[ p_2 = T_{r2}^{r1} [p_1^T \dots 1]^T \]
+
+				Finally, we project the point \( p_2 \) into the image plane to get its pixel location in the second frame:
+				\[ [u', v'] = [f_x \frac{p_{2,x}}{p_{2,z}} + c_x, f_y \frac{p_{2,y}}{p_{2,z}} + c_y] \]
+				Where \( f_x, f_y \) are the focal lengths of the camera and \( c_x, c_y \) are the coordinates of the camera center in the image plane.
+
+				The \( [u, v] - [u', v'] \) gives us the geometric optical flow at \( [u, v] \) in frame 1.
+
+				The key observation is the assumption that \( p_1 \) is static in the 3D scene. If \( p_1 \) moves \( \delta = [\delta_x, \delta_y, \delta_z] \) (in the camera reference frame at frame 2) 
+				between frame 1 and frame 2, we get the following image projection at frame 2:
+
+				\[ [u'_{dynamic}, v'_{dynamic}] = [f_x \frac{p_{2,x} + \delta_x}{p_{2,z} + \delta_z} + c_x, f_y \frac{p_{2,y} + \delta_y}{p_{2,z} + \delta_z} + c_y] \]
+
+				Then the geometric optical flow at \( [u, v] \) in frame 1 is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
+
+				Since RAFT estimates the actual observed optical flow from frame 1 to frame 2, it will return an optical flow close to \( [u'_{dynamic}, v'_{dynamic}] - [u, v] \) at \( [u, v] \).
+				Then, the residual at that pixel is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
+
+				Although we could theoretically recover the depth of \( [u'_{dynamic}, v'_{dynamic}] \) from the depth data for frame 2, in practice, noisy depth data and imperfect
+				pixel associations make this a noisy process. Instead, we assume that the object maintains constant depth between frames (\( \delta_z = 0 \)) and use the residual to only recover \( [\delta_x, \delta_y] \):
+
+				\[ [\delta_x, \delta_y] = p_{2,z} ([u'_{dynamic}, v'_{dynamic}] - [u', v']) \cdot [\frac{1}{f_x}, \frac{1}{f_y}] \]
+
+				This gives us \( v=\| \delta_x, \delta_y \| \) as an estimate for the velocity of the 3D point corresponding to each pixel. We can mask areas of the image with
+				\( v \) higher than a set threshold to obtain masks of dynamic objects in frame 1.
+
+				
 			</p>
+			<h4>Prototype</h4>
+			<p>Below is a video of our prototype of this method, where the bottom image shows flow residual magnitudes masked by the velocity threshold, which are pixels likely to be dynamic objects. 
+				To track the motion of dynamic objects across frames we first fed the residuals to the point tracking algorithm from, <a href="#ref_7">[7]</a>.
+				However, this introduces unnecessary computation, as RAFT optical flow is accurate enough to estimate the motion of each obstacle between the current and next frame.
+				The details are discussed below.</p>
 			<p>
-				To track the motion of obstacles across frames we first fed the residuals to the point tracking algorithm from, <a href="#ref_7">[7]</a>. But this introduced unnecessary computation. 
-				Instead of using point tracks, we estimate the velocity of the obstacles at each frame and use that to propagate their position into the next frame, achieving comparable performance without 
-				the need of another deep neural network. (TODO: Andy, is this right? Talk about your method here)
+				We also prototyped a method which uses the 3D residual between the optical flow predicted pointcloud and the odometry predicted pointcloud instead. It was much more noisy,
+				so we used flow residuals for our final method. See the appendix below for details.
 			</p>
 			<video class='my-video' loop autoplay muted style="width: 300px">
 				<source src="./videos/kimera/kimera_walk_og.mp4" type="video/mp4">
@@ -375,10 +416,32 @@
 			<video class='my-video' loop autoplay muted style="width: 300px">
 				<source src="./videos/kimera/walk_masked_pt.mp4" type="video/mp4">
 			</video>
+			<h4>Final Method</h4>
 			<p>
+				We implemented the above method in a pipeline that works with standard ROS bags as input data, with flow and residuals computed in batches using PyTorch tensors on GPU 
+				for performance. Once velocity magnitudes are computed from residual flow, we apply a threshold to the velocity magnitudes to obtain a binary mask of dynamic objects.
+				The threshold can be tuned. Because depth camera noise increases as depth increases, we set the threshold to scale by depth: \( thresh=min\_thresh + z \cdot thresh\_depth\_gain \)
 			</p>
-
 			<p>
+				Because of the noise in odometry and depth data, we improved the performance by post-processing the binary mask with OpenCV morphological operations.
+				Opening removes small points of noise, while closing removes small holes in the mask.
+
+				Once we have extracted a processed binary mask for the frame, we use scipy.ndimage.label to label connected components. Each connected component is extracted
+				as a mask and assumed to be a dynamic object. The pixels in the mask are unprojected to get a 3D pointcloud representing the dynamic object. We discard 
+				objects with a max axial variance not within a set range to further remove noise.
+			</p>
+			<p>
+				To facilitate tracking, we compute frame-by-frame associations between currently tracked dynamic objects and newly detected dynamic objects.
+			</p>
+			<p>
+				At each iteration, we predict the 3D location of currently tracked dynamic objects by propogating their masks into the next image frame using optical flow,
+				then using the next frame's depth data to unproject the masks into predicted point clouds. When dynamic objects are detected in the next frame, we unproject their masks
+				in that frame to get detected point clouds. We then use the Hungarian algorithm with point cloud centroid distance-based similarity to match newly detected dynamic objects with 
+				currently tracked dynamic objects using their associated point clouds. 
+				<br><br>
+				We augment the cost matrix and set costs to a large value if the point clouds are more than 
+				a set distance apart, so that newly detected objects not close to any currently tracked objects are not matched and become new tracked objects. Otherwise, currently
+				tracked objects are updated with their new detections.
 			</p>
 		    </div>
 		    <div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
@@ -415,7 +478,18 @@
 				</div>
 		    <div class="main-content-block">
 						<h1>Conclusion</h1>
-						Conclude with a discusion on implications and limitations
+						Although our method shows promise in efficient real-time detection and tracking of dynamic obstacles, it is extremely sensitive to the quality of data. 
+						During our experiments, we observed that poor quality depth data or odometry estimates led to the geometric optical flow having large deviations
+						from the RAFT optical flow in static areas of the image. Future work could include using a trained neural network to segment dynamic objects, since we do not
+						use the corresponding RGB image as a segmentation prior for each flow residual frame. A neural network that also uses FastSAM segments or superpixels
+						would better leverage all the available data. 
+						<br><br>
+						A planned extension to this work is to use LiDAR as the source for depth data. This would greatly increase the range and accuracy of depth data, at
+						the cost of sparsity (which could be addressed with stereo camera-LiDAR fusion). 
+						<br><br>
+						Despite these shortcomings, our method proves to be a promising approach to the problem of dynamic obstacle tracking. With only odometry and depth camera data, 
+						it demonstrates good performance and runtime on real-world data in certain environments. There appear to be many directions for further work to
+						improve robustness, efficency, and generalization.
 		    </div>
 		    <div class="margin-right-block">
 		    </div>
@@ -441,6 +515,17 @@
 		    <div class="margin-right-block">
             <!-- margin notes for reference block here -->
 		    </div>
+	</div>
+
+	<div class="content-margin-container" id="appendix">
+		<div class="margin-left-block">
+		</div>
+		<div class="main-content-block">
+					<h1>Appendix</h1>
+					<h4>Using 3D Residuals </h4>
+		</div>
+		<div class="margin-right-block">
+		</div>
 	</div>
 
 	</body>
