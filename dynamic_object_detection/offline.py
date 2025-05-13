@@ -9,8 +9,8 @@ from tqdm import tqdm
 import os
 import torch
 import gc
-import cv2 as cv
-
+import time
+import pickle
 from dynamic_object_detection.dod_util import copy_params_file, preprocess_depth, compute_relative_poses
 
 
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     if not os.path.exists(parent_dir):
         os.makedirs(parent_dir)
 
-    copy_params_file(parent_dir, params, args)
+    copy_params_file(params, args)
 
     print('loading raft...')
     raft = RaftWrapper(params.raft_params, params.device)
@@ -53,7 +53,10 @@ if __name__ == '__main__':
 
     effective_fps = params.original_fps / params.skip_frames
 
-    viz = OpticalFlowVisualizer(params.viz_params, f'{params.output}.avi', effective_fps)
+    runtimes = []
+
+    if params.viz_params.viz_video:
+        viz = OpticalFlowVisualizer(params.viz_params, f'{params.output}.avi', effective_fps)
     gof_flow = GeometricOpticalFlow(depth_data.camera_params, device=params.device)
     tracker = DynamicObjectTracker(params.tracking_params, depth_data.camera_params, effective_fps)
 
@@ -73,6 +76,8 @@ if __name__ == '__main__':
         batch_depth_imgs_np = depth_imgs[index:batch_end + 1]
         batch_depth_imgs = torch.tensor(batch_depth_imgs_np, dtype=torch.float32, device=params.device) # (B+1 H W)
         batch_T_1_0 = T_1_0[index:batch_end]
+
+        start_time = time.time()
 
         # print('computing raft optical flow...')
         raft_flows = raft.run_raft_batch(batch_img0s, batch_img1s) # (B H W 2)
@@ -98,15 +103,38 @@ if __name__ == '__main__':
             draw_objects=params.viz_params.viz_dynamic_object_masks,
         )
 
-        # print('writing video frames...')
-        viz.write_batch_frames(
-            batch_imgs_np[:-1],
-            batch_depth_imgs_np[:-1],
-            dynamic_masks,
-            orig_dynamic_masks,
-            raft_flows,
-            residual,
-        )
+        runtimes.append(time.time() - start_time)
+
+        if params.viz_params.viz_video:
+            # print('writing video frames...')
+            viz.write_batch_frames(
+                batch_imgs_np[:-1],
+                batch_depth_imgs_np[:-1],
+                dynamic_masks,
+                orig_dynamic_masks,
+                raft_flows,
+                residual,
+            )
 
     viz.end()
-    tracker.save_all_objects_to_pickle(os.path.join(parent_dir, f'{os.path.basename(params.output)}_objects.pkl'))
+
+
+    out = {
+        'objects': tracker.return_objects(),
+        'times': times[:-1], # last frame is not tracked
+        'poses': cam_poses,
+        'runtime': {
+            'avg_batch_time': np.mean(runtimes),
+            'avg_frame_time': np.mean(runtimes) / params.batch_size,
+            'total_time': np.sum(runtimes),
+        },
+        'camera_info': {
+            'K': depth_data.camera_params.K,
+            'H': depth_data.camera_params.height,
+            'W': depth_data.camera_params.width,
+        }
+    }
+
+    with open(f'{params.output}.pkl', 'wb') as fout:
+        pickle.dump(out, fout)
+        print(f'output and info saved to {params.output}.pkl')

@@ -37,6 +37,7 @@ class DynamicObjectTracker:
         self.tracked_objects = {}
         self.all_objects = {}
         self._id = 0
+        self.cur_frame = 0
 
     def run_tracker(self, residuals, imgs, depths, coords_3d, raft_coords_3d_1, times, cam_poses, draw_objects=False):
         """
@@ -79,7 +80,7 @@ class DynamicObjectTracker:
                     self.tracked_objects[new_obj.id] = new_obj
                     self.all_objects[new_obj.id] = new_obj # track all over time
 
-                self.tracked_objects[to_update_id].update_trajectory(new_obj.cur_point, times[frame]) # add to tracked object trajectory
+                self.tracked_objects[to_update_id].update_trajectory(new_obj.cur_point, self.cur_frame) # add to tracked object trajectory
                 self.tracked_objects[to_update_id].update(new_obj.mask, next_frame_points) # propogate to next frame for association
 
             mask = np.zeros((self.H, self.W), dtype=bool)
@@ -93,6 +94,8 @@ class DynamicObjectTracker:
 
                 imgs[frame][mask] = imgs[frame][mask] * 0.5 + OVERLAY * 0.5
 
+            self.cur_frame += 1
+
         return dynamic_mask, orig_dynamic_mask
     
     def labeled_mask_to_objects(self, labeled_mask, num_features, coords_3d_frame, cam_pose):
@@ -105,7 +108,7 @@ class DynamicObjectTracker:
             mask = (labeled_mask == i).reshape((-1)).astype(bool)
             points = remove_nan_points(coords_3d_frame[mask])
 
-            if len(points) == 0: continue
+            if len(points) < 4: continue
             if self.bad_dynamic_object_check(points): continue
 
             obj = DynamicObjectTrack(self._id, mask, points)
@@ -165,16 +168,20 @@ class DynamicObjectTracker:
 
         return mask, orig_mask
     
-    def save_all_objects_to_pickle(self, file_path):
-        with open(file_path, 'wb') as f:
-            pickle.dump({obj.id : obj.to_dict() for obj in self.all_objects.values()}, f)
+    def return_objects(self):
+        frame_object_list = [[] for _ in range(self.cur_frame)]
+        for obj in self.all_objects.values():
+            for point, frame in zip(obj.points_list, obj.frames):
+                frame_object_list[frame].append({'id': obj.id, 'point': point})
+        return frame_object_list
+
     
 
 class DynamicObjectTrack:
     def __init__(self, id_, mask, points):
         self.id = id_
         self.points_list = []
-        self.times = []
+        self.frames = []
         self.update(mask, points)
 
     def update(self, mask, points):
@@ -182,16 +189,9 @@ class DynamicObjectTrack:
         self.cur_point = np.mean(points, axis=0) # centroid
         self.points = points
 
-    def update_trajectory(self, cur_point, time):
+    def update_trajectory(self, cur_point, frame):
         self.points_list.append(cur_point)
-        self.times.append(time)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'times': self.times,
-            'points': self.points_list,
-        }
+        self.frames.append(frame)
 
     @classmethod
     def distance(cls, obj1, obj2):

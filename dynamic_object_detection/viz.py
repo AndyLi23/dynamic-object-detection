@@ -17,9 +17,7 @@ class OpticalFlowVisualizer:
         self.params = viz_params
         if not self.params.viz_video: return
 
-        matplotlib.use('Agg')
-
-        fourcc = cv.VideoWriter_fourcc(*'XVID')
+        fourcc = cv.VideoWriter_fourcc(*'MP4V')
         self.output_shape = self.params.viz_flags.shape
         self.output_file = output
         self.video_writer = cv.VideoWriter(output, fourcc, fps, self.params.vid_dims)
@@ -40,6 +38,7 @@ class OpticalFlowVisualizer:
 
                 if name == 'image':
                     resized_image = cv.resize(image[frame], (width, height))
+                    resized_image = cv.cvtColor(resized_image, cv.COLOR_RGB2BGR)
                     frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_image
                 elif name == 'depth':
                     depth_colored = cv.applyColorMap(cv.normalize(depth[frame], None, 0, 255, cv.NORM_MINMAX).astype(np.uint8), cv.COLORMAP_JET)

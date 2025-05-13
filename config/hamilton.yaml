@@ -8,9 +8,9 @@ batch_size: 24
 
 original_fps: 30
 # run once every `skip_frames` frames
-skip_frames: 3
+skip_frames: 2
 
-output: 'out/speedtest'
+output: 'out/hamilton1'
 
 raft:
   path: ${RAFT}/core/
@@ -35,10 +35,10 @@ depth_data:
   compressed: False
 
   depth_scale: 1000.0
-  max_depth: 7.5
+  max_depth: 6.0
 
   # d, sigmalColor, sigmalSpace. Delete or set to null to disable.
-  bilateral_smooth_depth: [10, 100, 5] # in mm. (before scaling by 1000.0)
+  # bilateral_smooth_depth: [10, 100, 5] # in mm. (before scaling by 1000.0)
 
 pose_data:
   type: bag
@@ -51,10 +51,10 @@ pose_data:
   # time_tol: 60.0
 
   T_odom_camera:
-    input_type: "string"
-    string: "T_FLURDF"
-    # parent: hamilton/base
-    # child: hamilton/forward_color_optical_frame
+    input_type: "tf"
+    # string: "T_FLURDF"
+    parent: hamilton/base
+    child: hamilton/forward_color_optical_frame
 
 tracking:
   # for 3D:
@@ -63,14 +63,14 @@ tracking:
   # for 2D:
   # approximate 3d residual magnitude = depth * K^-1 * [delta_u, delta_v, 0]
   min_vel_threshold: 0.4
-  vel_threshold_gain: 0.12
+  vel_threshold_gain: 0.125
 
   # supports open, close, dilate, erode. second number is kernel size.
   post_processing: [['open', 9], ['close', 13]]
 
   # std. deviation constraints for dynamic objects
   # can be single nmber or list of 3 (x, y, z)
-  min_3d_std_dev: 0.025
+  min_3d_std_dev: 0.05
   max_3d_std_dev: 0.5
 
   # maximum chamfer distance for a projected dynamic object & a newly detected

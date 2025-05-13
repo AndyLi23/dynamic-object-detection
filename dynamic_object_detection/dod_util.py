@@ -54,8 +54,8 @@ def global_nearest_neighbor(data1: list, data2: list, cost_fn: callable, max_cos
 
     return assignment
 
-def copy_params_file(parent_dir, params, args):
-    params_copy_path = os.path.join(parent_dir, f'{os.path.basename(params.output)}.yaml')
+def copy_params_file(params, args):
+    params_copy_path = f'{params.output}.yaml'
     with open(args.params, 'r') as src_file, open(params_copy_path, 'w') as dest_file:
         dest_file.write(src_file.read())
     print(f'saved params file to {params_copy_path}')
