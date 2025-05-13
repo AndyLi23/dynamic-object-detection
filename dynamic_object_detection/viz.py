@@ -38,8 +38,7 @@ class OpticalFlowVisualizer:
 
                 if name == 'image':
                     resized_image = cv.resize(image[frame], (width, height))
-                    resized_image = cv.cvtColor(resized_image, cv.COLOR_RGB2BGR)
-                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_image
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_image[..., [2, 1, 0]] # BGR
                 elif name == 'depth':
                     depth_colored = cv.applyColorMap(cv.normalize(depth[frame], None, 0, 255, cv.NORM_MINMAX).astype(np.uint8), cv.COLORMAP_JET)
                     resized_depth = cv.resize(depth_colored, (width, height))
