@@ -17,7 +17,7 @@ with less memory, even if `batch_size` is decreased.
 #### Demo
 
 To run the evaluation data in our blog, download the following rosbags:
-[hamilton data](TODO) (ROS1), 
+[hamilton data](https://drive.google.com/file/d/1kZmhye7E61mLJtyaEFTm_aBValKu3VF5/view?usp=sharing) (ROS1), 
 [ground truth](https://drive.google.com/drive/folders/1qGDTkIi9izoh6WXzFa-ODQmevd7g-kpr?usp=drive_link) (ROS2)
 
 ```
