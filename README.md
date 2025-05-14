@@ -39,4 +39,4 @@ The code for evaluation metrics is in `eval/eval.ipynb`. Change the following li
 os.environ['BAG_PATH'] = os.path.expanduser('/path/to/hamilton_data.bag')
 gt_bag = '~/path/to/gt_data/'
 ```
-Then run the entire notebook. Outputs will be printed at the bottom.
+Then change the `runs` variable in the last cell to the list of runs that you want to evaluate (names of the pkl/yaml/mp4 outputs, without extension). Run the entire notebook. Outputs will be printed at the bottom.
