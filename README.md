@@ -26,8 +26,13 @@ To run the evaluation data in our blog, download the following rosbags:
 ```
 export BAG_PATH=/path/to/hamilton_data.bag
 export RAFT=/path/to/dynamic-object-detection/RAFT/
-python3 dynamic_object_detection/main.py -p config/hamilton_final.yaml
+python3 dynamic_object_detection/main.py -p config/hamilton.yaml
 ```
+Edit `config/hamilton.yaml` to experiment with different parameters.
+
+*Note*: All operations assume undistorted images. Our data is already undistorted.
+
+#### Evaluation
 
 The code for evaluation metrics is in `eval/eval.ipynb`. Change the following lines in the second cell:
 ```
@@ -35,5 +40,3 @@ os.environ['BAG_PATH'] = os.path.expanduser('/path/to/hamilton_data.bag')
 gt_bag = '~/path/to/gt_data/'
 ```
 Then run the entire notebook. Outputs will be printed at the bottom.
-
-*Note*: All operations assume undistorted images. Our data is already undistorted.

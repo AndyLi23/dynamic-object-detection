@@ -280,15 +280,15 @@
 		    <div class="main-content-block">
 						<h1>Introduction</h1>
 			<p>
-				Advances in autonomous Unmanned Aerial Vehicle (UAV) navigation are improving our quality of life. The integration of this technology into emergency services, 
+				Advances in autonomous Unmanned Aerial Vehicle (UAV) and Unmanned Ground Vehicle (UGV) navigation are improving our quality of life. The integration of this technology into emergency services, 
 				search and rescue, first responders, as well as law-enforcement, and agriculture has observed accelerated growth in the past decade, promising a safer future.
-				UAV navigation has also had an impact in the delivery industry. While this might be perceived as superfluous next to the former, UAV deliveries enable the prompt 
+				UAV/UGV navigation has also had an impact in the delivery industry. While this might be perceived as superfluous next to the former, UAV/UGV deliveries enable the prompt 
 				dispatch of sensible products, such as medicine, to remote communities, difficult to access through ground transportation. This is still, however, an early technology,
-				with several limitations and open research questions. In particular, dynamic obstacle avoidance for UAVs is a longstanding problem in robotics.
+				with several limitations and open research questions. In particular, dynamic obstacle avoidance for UAV/UGVs is a longstanding problem in robotics.
 			</p>
 			<p>
 				Current state-of-the-art methods rely on event cameras, stereo cameras, depth cameras, or lidar.
-				But power and payload limitations restrict the perception and compute capacity of a UAV. These constraints give rise to a hard-to-strike 
+				But power and payload limitations restrict the perception and compute capacity of unmanned vehicles, particluarly UAVs. These constraints give rise to a hard-to-strike 
 				balance between latency and performance for real-time applications that is still an open question in the field today. 
 				Some methods favor efficiency while some favor performance, but the field is yet to adopt a general procedure to estimate the motion of dynamic obstacles. 
 				As a consequence, a large number of path planning algorithms assume static environments, but this is a 
@@ -305,7 +305,7 @@
 				</ol>
 			</p>
 			<p>
-				This becomes increasingly difficult when performing highly dynamic, high-speed motion as is the norm in the UAV literature. At these speeds,
+				Unfortunately, this becomes increasingly difficult when performing highly dynamic, high-speed motion as is the norm in the UAV literature. At these speeds,
 				motion blur pollutes the visual signal, which complicates the task of separating agent from obstacle motion. In this project, we propose the use of RAFT optical flow and the optical 
 				flow induced by scene flow to solve both of the aforementioned problems with just a frame camera.
 			</p>
@@ -489,7 +489,7 @@
 				a set distance apart, so that newly detected objects not close to any currently tracked objects are not matched and become new tracked objects. Otherwise, currently
 				tracked objects are updated with their new detections.
 			</p>
-			<p>A representative video of our algorithm running on data we collected is shown below. Top left and right are the RGB and depth images. 
+			<p>A representative video of our algorithm running on the data we collected is shown below. Top left and right are the RGB and depth images. 
 				Bottom right is the velocity residual magnitude, and bottom left is the post-processed binary mask. Overlaid on the images are the tracked 
 				dynamic objects and their IDs.
 				Noise is still present, but much of it is filtered out.
@@ -519,7 +519,7 @@
 			All robots were teleoperated. The ground truth pose data was collected using a Vicon motion capture system and recorded in a ROS2 bag. The Husky recorded 
 			a ROS1 bag with depth camera and pose data. We use our own rosbag processing software for dataloading.
 			<br><br>
-			The video of our algorithm running on the entire dataset is linked here: <a href="/dynamic-object-detection/videos/hamilton_full.mp4" target="_blank">hamilton full demo</a>.
+			The video of our algorithm running on the entire dataset is linked here: <a href="/dynamic-object-detection/videos/hamilton_full.mp4" target="_blank">[hamilton full demo]</a>.
 
 			<h4>Metrics</h4>
 
@@ -882,9 +882,9 @@
 		    <div class="main-content-block">
 						<hr style="margin-bottom: 30px">
 						<h1>Codebase</h1>
-						<p>See <a href="https://github.com/AndyLi23/dynamic-object-detection" target="_blank">dynamic-object-detection on Github</a> for our final implementation code. 
+						<p>See <a href="https://github.com/AndyLi23/dynamic-object-detection" target="_blank">[dynamic-object-detection on Github]</a> for our final implementation code. 
 							Instrutions for downloading our data and running the algorithm and evaluations are in the README. </p>
-						<p>The prototype is <a href="https://github.com/jrached/cv_project">also hosted on Github</a>.</p>
+						<p>The prototype code is also <a href="https://github.com/jrached/cv_project">[hosted on Github]</a>.</p>
 		    </div>
 		    <div class="margin-right-block">
 		    </div>
@@ -895,44 +895,7 @@
 		</div>
 		<div class="main-content-block">
 					<h1>Appendix</h1>
-					<h4>Smoothing and Quadcopter Experiments</h4>
-					While developing the prototype, we noticed rapid changes in pose produced high frequency noise in the flow residuals. 
-					Especially, for quadcopter experiments where video was recorded on a highly dynamic vehicle. 
-					Our first instinct was to design a low-pass filter to smooth the outputs of our pipeline. Thus, our prototype returned a 
-					running average of the flow residuals parametrized by \( \alpha \) as 
-					\[ smoothFlow =  \alpha \cdot Flow + (1 - \alpha) \cdot prevFlow \]
-					As expected of a running average, smoothing mitigated some of the noise, but it also generated a delay between the estimated and ground truth
-					obstacle position. In fact, some smoothing granted a minor performance boost, but it quickly degraded as we over-smoothed the signal and 
-					created a larger gap between the estimate and the actual position. 
-					
-					<img src="./images/prototype/pos_error.png" width=1028px/>
-					<br>
-					<img src="./images/prototype/pos_std.png" width=1028px/>
-					<br>
 
-					This motivated us to pivot from the running average approach. The analysis above was performed on data collected onboard a x500 Holybro Quadcopter. 
-					Below are the flow masks of the flow from the videos recorded by the quadcopter with \(1 - \alpha \) = 0.2 smoothing (left) and  \(1 - \alpha \) = 0.8 smoothing
-					(right). The flashes of white are moments in which the RAFT flow and geometric flow disagree. The attentive viewer will notice that the flashed occur when the 
-					quadcopter rolls. We found this to be a common trend: the signal-to-noise ration decreases as the vehicle performs aggressive maneuvers, particularly, while 
-					performing changes in orientation. Notice, that the video on the right exhibits less flashing, as it is heavily smoothed. This comes at the expensive of a 
-					higher trajectory error as the smoothed estimate lags behind the unprocessed one. Although we developed an improved noise reduction strategy, the noise introduced 
-					in aggressive UAV flights require advanced denoising techniques beyond the scope of this project, so we constrained the remainder of our experiments to ground vehicles. 
-				
-					<br>
-					<div class="media-container">
-						<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
-							<source src="./videos/prototype/flow_unsmoothed.mp4" type="video/mp4">
-						</video>
-						<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
-							<source src="./videos/prototype/flow_smoothed.mp4" type="video/mp4">
-						</video>
-					</div>
-					<br>
-					To estimate the obstacle position we unproject onto 3D space the points in the flow mask, and average those points to obtain the "centroid" of the masked points.
-					We use this centroid as our prediction of the obstacle's position. Clearly, a significant limitation of this approach is that it only works in scenes with at most one dynamic obstacle.  
-					Note these are preliminary results, meant to convey the challenge of handling noisy visual signals during aggressive motion. 
-					Our final implementation, computes the trajectory error by following a more sophisticated procedure outlined in the methods and experiment sections of this blog. 
-					<h4>Using 3D Residuals </h4>
 					<h4 id="app1">I. Using 3D Residuals </h4>
 
 					Because we have the depth data for both frame 1 and frame 2, in theory we can compute the full 3D movement 
@@ -1072,6 +1035,43 @@
 					continue using the 6.0m limit suggested by Intel, as any depth beyond that is guaranteed to be noisy. 
 					<br><br>
 
+					<h4>III. Smoothing and Quadcopter Experiments</h4>
+					While developing the prototype, we noticed rapid changes in pose produced high frequency noise in the flow residuals. 
+					Especially, for quadcopter experiments where video was recorded on a highly dynamic vehicle. 
+					Our first instinct was to design a low-pass filter to smooth the outputs of our pipeline. Thus, our prototype returned a 
+					running average of the flow residuals parametrized by \( \alpha \) as 
+					\[ smoothFlow =  \alpha \cdot Flow + (1 - \alpha) \cdot prevFlow \]
+					As expected of a running average, smoothing mitigated some of the noise, but it also generated a delay between the estimated and ground truth
+					obstacle position. In fact, some smoothing granted a minor performance boost, but it quickly degraded as we over-smoothed the signal and 
+					created a larger gap between the estimate and the actual position. 
+					
+					<img src="./images/prototype/pos_error.png" width=1028px/>
+					<br>
+					<img src="./images/prototype/pos_std.png" width=1028px/>
+					<br>
+
+					This motivated us to pivot from the running average approach. The analysis above was performed on data collected onboard a x500 Holybro Quadcopter. 
+					Below are the flow masks of the flow from the videos recorded by the quadcopter with \(1 - \alpha \) = 0.2 smoothing (left) and  \(1 - \alpha \) = 0.8 smoothing
+					(right). The flashes of white are moments in which the RAFT flow and geometric flow disagree. The attentive viewer will notice that the flashed occur when the 
+					quadcopter rolls. We found this to be a common trend: the signal-to-noise ration decreases as the vehicle performs aggressive maneuvers, particularly, while 
+					performing changes in orientation. Notice, that the video on the right exhibits less flashing, as it is heavily smoothed. This comes at the expensive of a 
+					higher trajectory error as the smoothed estimate lags behind the unprocessed one. Although we developed an improved noise reduction strategy, the noise introduced 
+					in aggressive UAV flights require advanced denoising techniques beyond the scope of this project, so we constrained the remainder of our experiments to ground vehicles. 
+					<br><br>
+					<div class="media-container">
+						<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
+							<source src="./videos/prototype/flow_unsmoothed.mp4" type="video/mp4">
+						</video>
+						<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
+							<source src="./videos/prototype/flow_smoothed.mp4" type="video/mp4">
+						</video>
+					</div>
+					<br>
+					To estimate the obstacle position we unproject onto 3D space the points in the flow mask, and average those points to obtain the "centroid" of the masked points.
+					We use this centroid as our prediction of the obstacle's position. Clearly, a significant limitation of this approach is that it only works in scenes with at most one dynamic obstacle.  
+					Note these are preliminary results, meant to convey the challenge of handling noisy visual signals during aggressive motion. 
+					Our final implementation computes the trajectory error by following a more sophisticated procedure outlined in the methods and experiment sections of this blog. 
+					<br><br>
 		</div>
 		<div class="margin-right-block">
 		</div>
