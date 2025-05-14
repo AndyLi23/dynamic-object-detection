@@ -207,7 +207,10 @@
 		gap: 0;	
 	}
 	
-
+	.underl {
+		text-decoration: underline;
+		vertical-align: baseline;
+	}
 
 
 	thead tr {
@@ -230,15 +233,15 @@
 						<table class="header" align=left style="margin: 30px 0px 0px 0px;">
 								<tr>
 									<td colspan=4>
-										<span style="font-size: 32px; font-family: 'Garamond', serif;">Flow Residuals for Open Set dynamic object tracking (FLOROS)</span>
+										<span style="font-size: 32px; font-family: 'Garamond', serif;"><span style="font-weight: bold; vertical-align: baseline;">FLOROS</span>: <span class="underl">Flo</span>w <span class="underl">R</span>esiduals for <span class="underl">O</span>pen <span class="underl">S</span>et Dynamic Object Tracking</span>
 									</td>
 								</tr>
 								<tr>
 										<td align=left>
-												<span style="font-size:21px"><a href="your_website">Qingyuan Li</a></span>
+												<span style="font-size:21px"><a href="">Qingyuan Li</a></span>
 										</td>
 										<td align=left>
-												<span style="font-size:21px"><a href="your_partner's_website">Juan Rached</a></span>
+												<span style="font-size:21px"><a href="">Juan Rached</a></span>
 										</td>
 								<tr>
 									<td colspan=4 align=left><span style="font-size:18px">MIT 6.8300 Final Project</span></td>
@@ -364,6 +367,7 @@
 				<div class="margin-left-block">
 				</div>
 		    <div class="main-content-block">
+				<hr style="margin-bottom: 30px">
 					<h1>Methodology</h1>
 
 			<p>
@@ -525,6 +529,7 @@
 		<div class="margin-left-block">
 		</div>
 		<div class="main-content-block">
+			<hr style="margin-bottom: 30px">
 		<h1>Experiments</h1>
 		<h4>Dataset</h4>
             We evaluate our method on our own dataset, collected in the Highbay of the Aerospace Controls Laboratory at MIT. We used a RealSense D455 depth camera 
@@ -893,6 +898,22 @@
 		    </div>
 	</div>
 
+	<div class="content-margin-container" id="acknowledgements">
+		<div class="margin-left-block">
+		</div>
+		<div class="main-content-block">
+					<h1>Acknowledgements</h1>
+					<p>
+						We would like to thank Professor Jonathan How for his guidance throughout this project and for 
+						generously providing access to the resources that we utilized. Special thanks as well to Lucas Jia 
+						for assisting us with physical experiments and data collection.
+					</p>
+		</div>
+		<div class="margin-right-block">
+		</div>
+	</div>
+
+
 	<div class="content-margin-container" id="codebase">
 				<div class="margin-left-block">
 				</div>
@@ -911,6 +932,7 @@
 		<div class="margin-left-block">
 		</div>
 		<div class="main-content-block">
+					<hr style="margin-bottom: 30px">
 					<h1>Appendix</h1>
 
 					<h4 id="app1">I. Using 3D Residuals </h4>
