@@ -1,5 +1,5 @@
 import yaml
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import numpy as np
 from os.path import expanduser, expandvars
 from robotdatapy.data import PoseData, ImgData
@@ -130,10 +130,10 @@ class RaftParams:
 class TrackingParams:
     min_vel_threshold: float
     vel_threshold_gain: float
-    post_processing: list
     max_merge_dist: float
     gaussian_smoothing: bool = False
     gaussian_kernel_size: int = 0
+    post_processing: list = field(default_factory=list)
     min_3d_std_dev: float = None
     max_3d_std_dev: float = None
 

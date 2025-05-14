@@ -188,6 +188,24 @@
 	    width: 50px; /* Optional: Adds space between the div and the paragraph */
 	}
 
+	.caption {
+		text-align: center; 
+		margin-top: 10px;
+		font-size: 16px;
+		font-style: italic;
+	}
+
+	video {
+		margin: 0;
+	}
+
+	.video-container {
+		display: flex; 
+		justify-content: center; 
+		align-items: center; 
+		gap: 0;
+	}
+
 </style>
 
 	  <title>FLOROS</title>
@@ -235,6 +253,8 @@
               <a href="#results">Results</a><br><br>
               <a href="#conclusion">Conclusion</a><br><br>
               <a href="#citations">References</a><br><br>
+			  <a href="#codebase">Codebase</a><br><br>
+			  <a href="#appendix">Appendix</a><br><br>
           </div>
 				</div>
 		    <div class="main-content-block">
@@ -376,17 +396,39 @@
 				\[ [u', v'] = [f_x \frac{p_{2,x}}{p_{2,z}} + c_x, f_y \frac{p_{2,y}}{p_{2,z}} + c_y] \]
 				Where \( f_x, f_y \) are the focal lengths of the camera and \( c_x, c_y \) are the coordinates of the camera center in the image plane.
 
+<<<<<<< HEAD
 				The (@Andy shouldn't this be flipped?) \( [u, v] - [u', v'] \) gives us the geometric optical flow at \( [u, v] \) in frame 1.
+=======
+				The \( [u', v'] - [u, v] \) gives us the geometric optical flow at \( [u, v] \) in frame 1.
+>>>>>>> b30f20fe37a9a105a59b9e65013b3cb8506bd1e9
 
 				The key observation is the assumption that \( p_1 \) is static in the 3D scene. If \( p_1 \) moves \( \delta = [\delta_x, \delta_y, \delta_z] \) (in the camera reference frame at frame 2) 
 				between frame 1 and frame 2, we get the following image projection at frame 2:
 
 				\[ [u'_{dynamic}, v'_{dynamic}] = [f_x \frac{p_{2,x} + \delta_x}{p_{2,z} + \delta_z} + c_x, f_y \frac{p_{2,y} + \delta_y}{p_{2,z} + \delta_z} + c_y] \]
 
+<<<<<<< HEAD
 				Then the geometric optical flow at \( [u, v] \) in frame 1 is (@Andy, isn't this the residual?) \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
 
+=======
+				Then the geometric optical flow at \( [u, v] \) in frame 1 is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
+				<br><br></bre>
+				In the video below, RAFT optical flow is juxtaposed with geometric optical flow. 
+				Where the geometric optical flow is white, it cannot be computed because there is no depth data (we capped the
+				max depth at 6.0m, as suggested by Intel).
+			</p>
+			<div class="video-container">
+				<video class='my-video' loop autoplay muted style="width: 800px; max-width: 100%;">
+					<source src="./videos/flow.mp4" type="video/mp4">
+				</video>
+			</div>
+			<div class="caption">
+				<span>Figure 1. Clockwise from top left: RGB image, depth image, <br>geometric optical flow, RAFT flow</span>
+			</div>
+			<p>
+>>>>>>> b30f20fe37a9a105a59b9e65013b3cb8506bd1e9
 				Since RAFT estimates the actual observed optical flow from frame 1 to frame 2, it will return an optical flow close to \( [u'_{dynamic}, v'_{dynamic}] - [u, v] \) at \( [u, v] \).
-				Then, the residual at that pixel is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
+				Then, the residual (RAFT minus geometric flow) at that pixel is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
 
 				Although we could theoretically recover the depth of \( [u'_{dynamic}, v'_{dynamic}] \) from the depth data for frame 2, in practice, noisy depth data and imperfect
 				pixel associations make this a noisy process. Instead, we assume that the object maintains constant depth between frames (\( \delta_z = 0 \)) and use the residual to only recover \( [\delta_x, \delta_y] \):
@@ -401,21 +443,25 @@
 				
 			</p>
 			<h4>Prototype</h4>
+
 			<p>Below is a video of our prototype of this method running on data from Kimera-Multi, <a href="#ref_10">[10]</a>, where the right image shows flow residual magnitudes masked by the velocity threshold. 
 				To track the motion of dynamic objects across frames we first fed the residuals to the point tracking algorithm from, <a href="#ref_7">[7]</a>.
 				However, this introduces unnecessary computation, as RAFT optical flow is accurate enough to estimate the motion of each obstacle between the current and next frame.
 				The details are discussed below.</p>
 			<p>
-				We also prototyped a method which uses the 3D residual between the optical flow predicted pointcloud and the odometry predicted pointcloud instead. It was much more noisy,
-				so we used flow residuals for our final method. See the appendix below for details.
+				We also prototyped a method which uses the 3D residual between the optical flow predicted pointcloud and the odometry predicted pointcloud instead. 
+				It was significantly noisier, so we used flow residuals for our final method. See the appendix below for details.
 			</p>
-			<div style="display: flex; justify-content: center; align-items: center; gap: 0;">
-				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%; margin: 0;">
+			<div class="video-container">
+				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
 					<source src="./videos/kimera/kimera_walk_og.mp4" type="video/mp4">
 				</video>
-				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%; margin: 0;">
+				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
 					<source src="./videos/kimera/walk_masked_pt.mp4" type="video/mp4">
 				</video>
+			</div>
+			<div class="caption">
+				<span>Figure 2. Top is RGB image, bottom is flow residual magnitude <br> masked by the velocity threshold.</span>
 			</div>
 			<h4>Final Algorithm</h4>
 			<p>
@@ -444,28 +490,82 @@
 				a set distance apart, so that newly detected objects not close to any currently tracked objects are not matched and become new tracked objects. Otherwise, currently
 				tracked objects are updated with their new detections.
 			</p>
-			<p>A representative video of our algorithm running on data we collected is shown below. Noise is still present, but much of it is filtered out. The full video is 
-				<a href="/blog_template/videos/hamilton_full.mp4" target="_blank">here</a>.
+			<p>A representative video of our algorithm running on data we collected is shown below. Top left and right are the RGB and depth images. 
+				Bottom right is the velocity residual magnitude, and bottom left is the post-processed binary mask. Overlaid on the images are the tracked 
+				dynamic objects and their IDs.
+				Noise is still present, but much of it is filtered out.
 			</p>
-				<div style="display: flex; justify-content: center; align-items: center; gap: 0;">
-					<video class='my-video' loop autoplay muted style="width: 800px; max-width: 100%; margin: 0;">
-						<source src="./videos/hamilton.mp4" type="video/mp4">
-					</video>
-		    	</div>
+			<div class="video-container">
+				<video class='my-video' loop autoplay muted style="width: 800px; max-width: 100%;">
+					<source src="./videos/hamilton.mp4" type="video/mp4">
+				</video>
+			</div>
+			<div class="caption">
+				<span>Figure 3. Clockwise from top left: RGB image, depth image, <br>
+					velocity magnitude from flow residual, post-processed binary mask</span>
+			</div>
 			</div>
 		    <div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
 		    </div>
 	</div>
 
 	<div class="content-margin-container" id="experiments">
-				<div class="margin-left-block">
-				</div>
-		    <div class="main-content-block">
-            <h1>Experiments</h1>
-            In this section we discuss our experiments
-		    </div>
-		    <div class="margin-right-block">
-		    </div>
+		<div class="margin-left-block">
+		</div>
+		<div class="main-content-block">
+		<h1>Experiments</h1>
+		<h4>Dataset</h4>
+            We evaluate our method on our own dataset, collected in the Highbay of the Aerospace Controls Laboratory at MIT. We used a Realsense D455 depth camera 
+			on a Clearpath Husky with an Ouster lidar and MicroStrain IMU running lidar-inertial odometry. The moving objects are a hexcopter and another ground robot.
+			All robots were teleoperated. The ground truth pose data was collected using a Vicon motion capture system and recorded in a ROS2 bag. The Husky recorded 
+			a ROS1 bag with depth camera and pose data. We use our own rosbag processing software for dataloading.
+			<br><br>
+			The video of our algorithm running on the entire dataset is linked here: <a href="/dynamic-object-detection/videos/hamilton_full.mp4" target="_blank">hamilton full demo</a>.
+
+			<h4>Metrics</h4>
+
+			We run our algorithm on the entire dataset. For each frame of the output, if there is ground truth data close to the associated timestamp, we compute the 
+			following metrics:
+
+			<ul>
+				<li>Theoretical number of dynamic objects according to ground truth data. (\( N_{gt} \))</li>
+					<ul>
+						<li>Since we have ground truth poses, we can compute where the Scout and hexcopter are in the current image frame.
+							We can also approximate their velocities by linearizing around their poses at that frame (0.25s ahead/behind).
+							If the centroid of a robot is within the image dimensions and it has an approximate velocity 
+							above the depth-scaled threshold from the parameters, we count it as a dynamic object in that frame.</li>
+					</ul>
+				<li>Number of detected ground truth dynamic objects (\( N_{det} \))</li>
+					<ul>
+						<li>If there is a detected object in that frame with a point cloud centroid within 1.0m* of the ground truth dynamic object pose, 
+							we count that object as detected in that frame.
+						</li>
+						<li>This also gives us the number of ground truth dynamic objects not detected; i.e. false negative (\( N_{missed} \))</li>
+					</ul>
+				<li>Total number of detected dynamic objects (\( N \))</li>
+				<li>Number of correctly detected dynamic objects. (\( N_{corr} \))</li>
+					<ul>
+						<li>
+							If the detected object's point cloud centroid is within 1.0m of the ground truth object pose, we count it as a correct detection.
+						</li>
+						<li>
+							This also gives us the number of detected dynamic objects not associated with ground truth data; i.e. false positives (\( N_{incorr} \)).
+						</li>
+					</ul>
+			</ul>
+
+			* Our robots are ~1.0m in their largest dimension so that seemed like a reasonable threshold. The ground truth data is 
+			also not at the robot center of mass in the robot Z axis. <br><br>
+
+
+			We also define the following percentages for ease of comparison:
+			<ul>
+				<li>Percentage of ground truth dynamic objects detected \( det\% =\dfrac{N_{det}}{N_{gt}}\)</li>
+				<li>Percentage of false positives \( fp\% =\dfrac{N_{incorr}}{N}\)</li>
+			</ul>
+		</div>
+		<div class="margin-right-block">
+		</div>
 	</div>
 
 	<div class="content-margin-container" id="results">
@@ -473,7 +573,198 @@
 			</div>
 		<div class="main-content-block">
 		<h1>Results</h1>
-		In this section, we discuss the outcome of our experiments.
+		We evaluated our algorithm with different parameters. First, we determined the best RAFT model for our application. Each was run
+		with all other parameters fixed. RAFT options were not touched, besides defining iter=12 for each model.
+
+		<div class="caption">
+			<span>Table 1. RAFT model comparison</span>
+		</div>
+		<table border="1" style="width:100%; text-align:center; border-collapse:collapse;">
+			<thead>
+				<tr>
+					<th>Model</th>
+					<th>\( N_{gt} \)</th>
+					<th>\( N_{det} \)</th>
+					<th>\( N \)</th>
+					<th>\( N_{corr} \)</th>
+					<th>\( det\% \)</th>
+					<th>\( fp\% \)</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>raft-kitti</td>
+					<td>1283</td>
+					<td>1041</td>
+					<td>1416</td>
+					<td>1058</td>
+					<td>81.14%</td>
+					<td>25.28%</td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td>raft-things</td>
+					<td>1283</td>
+					<td>1085</td>
+					<td>1383</td>
+					<td>1110</td>
+					<td>84.57%</td>
+					<td>19.74%</td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td><strong>raft-sintel</strong></td>
+					<td>1283</td>
+					<td>1088</td>
+					<td>1384</td>
+					<td>1114</td>
+					<td><strong>84.80%</strong></td>
+					<td><strong>19.51%</strong></td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td>raft-chairs</td>
+					<td>1283</td>
+					<td>672</td>
+					<td>1173</td>
+					<td>702</td>
+					<td>52.38%</td>
+					<td>40.15%</td>
+				</tr>
+			</tbody>
+		</table>
+		<br>
+		Subsequent evaluations were run with the raft-sintel model.
+		<br><br>
+		We then evaluated the effect of framerate on our algorithm. The original RGBD data was recorded at 30Hz,
+		but we downsampled it to 15, 10, and 6Hz and ran the algorithm with other parameters fixed. The results are shown below.
+		
+		<div class="caption">
+			<span>Table 2. Framerate comparison</span>
+		</div>
+
+		<table border="1" style="width:100%; text-align:center; border-collapse:collapse;">
+			<thead>
+				<tr>
+					<th>Framerate</th>
+					<th>\( N_{gt} \)</th>
+					<th>\( N_{det} \)</th>
+					<th>\( N \)</th>
+					<th>\( N_{corr} \)</th>
+					<th>\( det\% \)</th>
+					<th>\( fp\% \)</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td><strong>15Hz</strong></td>
+					<td>1283</td>
+					<td>1086</td>
+					<td>1380</td>
+					<td>1111</td>
+					<td><strong>84.65%</strong></td>
+					<td>19.49%</td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td>10Hz</td>
+					<td>849</td>
+					<td>715</td>
+					<td>900</td>
+					<td>731</td>
+					<td>84.22%</td>
+					<td><strong>18.78%</strong></td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td>6Hz</td>
+					<td>513</td>
+					<td>416</td>
+					<td>530</td>
+					<td>422</td>
+					<td>81.09%</td>
+					<td>20.38%</td>
+				</tr>
+			</tbody>
+		</table>
+		<br>
+		The relative performance of the algorithm is similar across framerates, but a higher framerate allows for earlier 
+		detection of dynamic objects. Therefore, we ran all other evaluations at 15Hz.
+
+		<br><br>
+		We then evaluated the effect of various noise-reduction methods. 
+
+		<div class="caption">
+			<span>Table 2. Noise reduction comparison</span>
+		</div>
+
+		<table border="1" style="width:100%; text-align:center; border-collapse:collapse;">
+			<thead>
+				<tr>
+					<th>Method</th>
+					<th>\( N_{gt} \)</th>
+					<th>\( N_{det} \)</th>
+					<th>\( N \)</th>
+					<th>\( N_{corr} \)</th>
+					<th>\( det\% \)</th>
+					<th>\( fp\% \)</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>Original</td>
+					<td>1283</td>
+					<td>1088</td>
+					<td>1384</td>
+					<td>1114</td>
+					<td>84.80%</td>
+					<td><strong>19.51%</strong></td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td>No Morphology</td>
+					<td>1283</td>
+					<td>1102</td>
+					<td>2626</td>
+					<td>1294</td>
+					<td>85.89%</td>
+					<td>50.72%</td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td>No axial variance-based discarding</td>
+					<td>1283</td>
+					<td>1119</td>
+					<td>1662</td>
+					<td>1183</td>
+					<td><strong>87.22%</strong></td>
+					<td>28.82%</td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td>No depth-based velocity threshold gain</td>
+					<td>1318</td>
+					<td>1097</td>
+					<td>1605</td>
+					<td>1112</td>
+					<td>83.23%</td>
+					<td>30.72%</td>
+				</tr>
+			</tbody>
+		</table>
+		<br>
+		We find that morphological operations are very effective at removing noise from the mask. Variance-based discarding 
+		and depth-based velocity threshold gain also have some effect. Variance-based discarding and morphological operations 
+		somewhat reduce the detection rate, but the reduction in false positives is more significant.
+
 		</div>
 		<div class="margin-right-block">
 		</div>
@@ -487,7 +778,7 @@
 						Although our method shows promise in efficient real-time detection and tracking of dynamic obstacles, it is extremely sensitive to the quality of data. 
 						During our experiments, we observed that poor quality depth data or odometry estimates led to the geometric optical flow having large deviations
 						from the RAFT optical flow in static areas of the image. Future work could include using a trained neural network to segment dynamic objects, since we do not
-						use the corresponding RGB image as a segmentation prior for each flow residual frame. A neural network that also uses FastSAM segments or superpixels
+						use the corresponding RGB image as a prior for segmentation of flow residuals. A neural network that also uses FastSAM segments or superpixels
 						would better leverage all the available data. 
 						<br><br>
 						A planned extension to this work is to use LiDAR as the source for depth data. This would greatly increase the range and accuracy of depth data, at
@@ -499,7 +790,7 @@
 						is a promising direction of future work. 
 						<br><br>
 						Despite these shortcomings, our method proves to be a promising approach to the problem of dynamic obstacle tracking. With only odometry and depth camera data, 
-						it demonstrates good performance and runtime on real-world data in certain environments. There appear to be many directions for further work to
+						it demonstrates good performance and runtime on real-world data in the tested environments. There appear to be many directions for further work to
 						improve robustness, efficency, and generalization.
 		    </div>
 		    <div class="margin-right-block">
@@ -511,7 +802,7 @@
 				</div>
 		    <div class="main-content-block">
 						<div class='citation' id="references" style="height:auto"><br>
-							<span style="font-size:16px">References:</span><br><br>
+							<h1>References</h1>
 							<a id="ref_1"></a>[1] <a href="https://ieeexplore.ieee.org/abstract/document/8968021">Tordesillas, J., Lopez, B. T., & How, J. P. (2019, November). Faster: Fast and safe trajectory planner for flights in unknown environments. In 2019 IEEE/RSJ international conference on intelligent robots and systems (IROS) (pp. 1934-1940). IEEE.</a><br><br>
 							<a id="ref_2"></a>[2] <a href="https://ieeexplore.ieee.org/abstract/document/9490372	">Tordesillas, J., & How, J. P. (2021). MADER: Trajectory planner in multiagent and dynamic environments. IEEE Transactions on Robotics, 38(1), 463-476.</a><br><br>
 							<a id="ref_3"></a>[3] <a href="https://ieeexplore.ieee.org/abstract/document/10161244">Kondo, K., Tordesillas, J., Figueroa, R., Rached, J., Merkel, J., Lusk, P. C., & How, J. P. (2023, May). Robust MADER: Decentralized and asynchronous multiagent trajectory planner robust to communication delay. In 2023 IEEE International Conference on Robotics and Automation (ICRA) (pp. 1687-1693). IEEE. </a><br><br>
@@ -530,7 +821,7 @@
 		    </div>
 	</div>
 
-	<div class="content-margin-container" id="acknowledgements">
+	<div class="content-margin-container" id="codebase">
 				<div class="margin-left-block">
 				</div>
 		    <div class="main-content-block">
