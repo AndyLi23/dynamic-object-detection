@@ -468,7 +468,7 @@
 			<p>
 				We implemented the above method in a pipeline that works with standard ROS bags as input data, with flow and residuals computed in batches using PyTorch tensors on GPU 
 				for performance. Once velocity magnitudes are computed from residual flow, we apply a threshold to the velocity magnitudes to obtain a binary mask of dynamic objects.
-				The threshold can be tuned. Because depth camera noise increases as depth increases, we set the threshold to scale by depth: \( thresh=min\_thresh + z \cdot thresh\_depth\_gain \)
+				The threshold can be tuned. Because depth camera noise increases as depth increases, we set the threshold to scale by depth: \( thresh=min\_thresh + d \cdot thresh\_depth\_gain \)
 			</p>
 			<p>
 				Because of the noise in odometry and depth data, we improved the performance by post-processing the binary mask with OpenCV morphological operations.
@@ -780,7 +780,7 @@
 		since the original parameters were 0.4 for the minimum velocity threshold and 0.125 for the depth-based gain.</i>
 		<br><br>
 		We find that morphological operations are very effective at removing noise from the mask. Variance-based discarding 
-		and depth-based velocity threshold gain also have some effect. Variance-based thresholding and morphological operations 
+		and depth-based velocity threshold gain also have a noticeable effect. Variance-based thresholding and morphological operations 
 		somewhat reduce the detection rate, but the reduction in false positives is more significant.
 
 		<br><br>
@@ -856,7 +856,7 @@
 						which can better detect movement in the camera Z axis.
 						<br><br>
 						A major limitation of this method is that under high accelerations, the RAFT and geometric flow significantly diverge, leading to underwhelming results during UAV flights. 
-						There are multiple culprits, including noisy depth data and poor RAFT results at high accelerations. The most likely reason seems to be odometry,
+						There are multiple culprits, including noisy depth data and poor RAFT results at high accelerations. The most likely reason seems to be poor odometry,
 						since the divergence often occurs during acceleration, suggesting latency and/or noise in the odometry data. Also, since pose data is collected at independent 
 						times from the RGBD data, we must perform linear interpolation to approximate it every frame, which introduces additional error.
 						<br><br>
@@ -956,7 +956,7 @@
 								<td>1088</td>
 								<td>1384</td>
 								<td>1114</td>
-								<td>84.80%</td>
+								<td><strong>84.80%</strong></td>
 								<td><strong>19.51%</strong></td>
 							</tr>
 						</tbody>
@@ -968,7 +968,7 @@
 								<td>35857</td>
 								<td>1400</td>
 								<td>73.19%</td>
-								<td><strong>96.10%</strong></td>
+								<td>96.10%</td>
 							</tr>
 						</tbody>
 					</table>
