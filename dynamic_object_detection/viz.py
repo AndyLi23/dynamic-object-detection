@@ -22,7 +22,7 @@ class OpticalFlowVisualizer:
         self.output_file = output
         self.video_writer = cv.VideoWriter(output, fourcc, fps, self.params.vid_dims)
 
-    def write_batch_frames(self, image, depth, dynamic_mask, orig_dynamic_masks, raft_flow, residual):
+    def write_batch_frames(self, image, depth, dynamic_mask, orig_dynamic_masks, raft_flow, geom_flow, residual):
         if not self.params.viz_video: return
 
         for frame in range(len(image)):
@@ -37,8 +37,9 @@ class OpticalFlowVisualizer:
                 height = self.params.vid_dims[1] // self.output_shape[0]
 
                 if name == 'image':
-                    resized_image = cv.resize(image[frame], (width, height))
-                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_image[..., [2, 1, 0]] # BGR
+                    img = image[frame]
+                    resized_img = cv.resize(img, (width, height))
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_img
                 elif name == 'depth':
                     depth_colored = cv.applyColorMap(cv.normalize(depth[frame], None, 0, 255, cv.NORM_MINMAX).astype(np.uint8), cv.COLORMAP_JET)
                     resized_depth = cv.resize(depth_colored, (width, height))
@@ -47,12 +48,16 @@ class OpticalFlowVisualizer:
                     dynamic_colored = cv.cvtColor((dynamic_mask[frame] * 255).astype(np.uint8), cv.COLOR_GRAY2BGR)
                     resized_dynamic = cv.resize(dynamic_colored, (width, height))
                     frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_dynamic
-                elif name == 'orig_dynamic_mask':
+                elif name == 'orig dynamic mask':
                     orig_dynamic_colored = cv.cvtColor((orig_dynamic_masks[frame] * 255).astype(np.uint8), cv.COLOR_GRAY2BGR)
                     resized_orig_dynamic = cv.resize(orig_dynamic_colored, (width, height))
                     frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_orig_dynamic
                 elif name == 'raft flow':
                     flow_image = OpticalFlowVisualizer.viz_optical_flow_img(raft_flow[frame])
+                    resized_flow = cv.resize(flow_image, (width, height))
+                    frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_flow
+                elif name == 'geometric flow':
+                    flow_image = OpticalFlowVisualizer.viz_optical_flow_img(geom_flow[frame])
                     resized_flow = cv.resize(flow_image, (width, height))
                     frame_canvas[y_offset:y_offset + height, x_offset:x_offset + width] = resized_flow
                 elif name == 'residual':

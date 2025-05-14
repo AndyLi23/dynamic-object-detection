@@ -86,10 +86,11 @@ if __name__ == '__main__':
         raft_flows = raft.run_raft_batch(batch_img0s, batch_img1s) # (B H W 2)
 
         # print('computing optical flow residual...')
-        residual, coords_3d, raft_coords_3d_1= gof_flow.compute_flow(raft_flows, batch_depth_imgs, batch_T_1_0, use_3d=params.use_3d) # (B H W), (B H W 3), (B H W 3)
+        residual, coords_3d, raft_coords_3d_1, geom_flows = gof_flow.compute_flow(raft_flows, batch_depth_imgs, batch_T_1_0, use_3d=params.use_3d) # (B H W), (B H W 3), (B H W 3)
 
         # convert to numpy for tracking and visualization
         raft_flows = raft_flows.cpu().numpy()
+        if geom_flows is not None: geom_flows = geom_flows.cpu().numpy()
         residual = residual.cpu().numpy()
         coords_3d = coords_3d.cpu().numpy()
         raft_coords_3d_1 = raft_coords_3d_1.cpu().numpy()
@@ -116,6 +117,7 @@ if __name__ == '__main__':
                 dynamic_masks,
                 orig_dynamic_masks,
                 raft_flows,
+                geom_flows,
                 residual,
             )
 

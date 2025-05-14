@@ -92,7 +92,7 @@ class DynamicObjectTracker:
                     obj_mask_center = np.mean(np.argwhere(obj_mask > 0), axis=0).astype(int)
                     imgs[frame] = cv.putText(imgs[frame], str(obj.id), (obj_mask_center[1], obj_mask_center[0]), cv.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
 
-                imgs[frame][mask] = imgs[frame][mask] * 0.5 + OVERLAY * 0.5
+                imgs[frame][mask] = imgs[frame][mask] * 0.4 + OVERLAY * 0.6
 
             self.cur_frame += 1
 

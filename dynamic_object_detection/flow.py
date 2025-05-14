@@ -27,10 +27,12 @@ class GeometricOpticalFlow:
 
         raft_coords_3d_1 = self.raft_unproject(raft_flow, depth_images[1:])                                 # (N, H*W, 3), (N, H, W)
 
-        if use_3d: coords_3d, residual = self.compute_residual_3d_flow(raft_coords_3d_1, depth_images[:-1], T_1_0)
-        else: coords_3d, residual = self.compute_residual_2d_flow(raft_flow, depth_images[:-1], T_1_0)
+        if use_3d: 
+            coords_3d, residual = self.compute_residual_3d_flow(raft_coords_3d_1, depth_images[:-1], T_1_0)
+            geom_flow = None
+        else: coords_3d, residual, geom_flow = self.compute_residual_2d_flow(raft_flow, depth_images[:-1], T_1_0)
 
-        return residual, coords_3d, raft_coords_3d_1
+        return residual, coords_3d, raft_coords_3d_1, geom_flow
 
 
     # --------------- For 2D flow --------------- #
@@ -52,7 +54,7 @@ class GeometricOpticalFlow:
         resid_vel = depth_images * torch.linalg.norm(resid_flow, dim=-1)                                    # (N, H, W)
 
         # not time normalized, done in tracker.py
-        return coords_3d, resid_vel                                                                         # (N, H*W, 3), (N, H, W)                   
+        return coords_3d, resid_vel, gflow                                                                         # (N, H*W, 3), (N, H, W)                   
         
 
     @torch.no_grad()
