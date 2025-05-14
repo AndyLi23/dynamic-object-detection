@@ -11,7 +11,7 @@ original_fps: 30
 skip_frames: 2
 
 # output: 'out/ablations/min_consecutive'
-output: 'out/ablations/min_consecutive'
+output: 'out/hamilton'
 
 raft:
   path: ${RAFT}/core/
@@ -79,7 +79,7 @@ tracking:
 
   # minimum number of consecutive frames a dynamic object must be detected in 
   # for it to be considered (1 by default)
-  min_consecutive_frames: 2
+  # min_consecutive_frames: 2
 
 viz:
   viz_video: False
