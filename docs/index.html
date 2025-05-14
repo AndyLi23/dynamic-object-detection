@@ -199,12 +199,15 @@
 		margin: 0;
 	}
 
-	.video-container {
+	.media-container {
 		display: flex; 
 		justify-content: center; 
 		align-items: center; 
-		gap: 0;
+		gap: 0;	
 	}
+	
+
+
 
 </style>
 
@@ -365,6 +368,7 @@
 				Optical flow assigns pixel correspondences between two frames by solving the optimization problem below: 
 			</p>
 			\[ E = \min_{\mu} \left[ (\nabla^T \mathbf{I}_1\mu - (\mathbf{I}_2-\mathbf{I}_1)^2+\alpha(|\nabla \mu_x|^2+|\nabla \mu_y|^2)) \right] \] 
+
 			<p>
 				Where the first term enforces correspondences based on the color constancy assumption, which states that the color of each point in the scene does not change between frames, and the second term promotes smooth uniform flow by encouraging each 
 				flow vector to be close to the average of its neighboring vectors. Common pitfalls of classic optical flow include: 
@@ -403,12 +407,12 @@
 
 				\[ [u'_{dynamic}, v'_{dynamic}] = [f_x \frac{p_{2,x} + \delta_x}{p_{2,z} + \delta_z} + c_x, f_y \frac{p_{2,y} + \delta_y}{p_{2,z} + \delta_z} + c_y] \]
 
-			
+	
 				In the video below, RAFT optical flow is juxtaposed with geometric optical flow. 
 				Where the geometric optical flow is white, it cannot be computed because there is no depth data (we capped the
 				max depth at 6.0m, as suggested by Intel).
 			</p>
-			<div class="video-container">
+			<div class="media-container">
 				<video class='my-video' loop autoplay muted style="width: 800px; max-width: 100%;">
 					<source src="./videos/flow.mp4" type="video/mp4">
 				</video>
@@ -424,7 +428,7 @@
 				Although we could theoretically recover the depth of \( [u'_{dynamic}, v'_{dynamic}] \) from the depth data for frame 2, in practice, noisy depth data and imperfect
 				pixel associations make this a noisy process. Instead, we assume that the object maintains constant depth between frames (\( \delta_z = 0 \)) and use the residual to only recover \( [\delta_x, \delta_y] \):
 
-				\[ [\delta_x, \delta_y] = p_{2,z} ([u'_{dynamic}, v'_{dynamic}] - [u', v']) \cdot [\frac{1}{f_x}, \frac{1}{f_y}] \]
+				\[ [\delta_x, \delta_y] = p_{2,z} ([u'_{dynamic}, v'_{dynamic}] - [u', v']) \cdot [\frac{1}{f_x}, \frac{1}{f_y}] \] 
 
 				This assumption works reasonably well in practice, although it is not effective at detecting objects moving along the camera Z axis.
 				<br><br>
@@ -443,12 +447,12 @@
 				We also prototyped a method which uses the 3D residual between the optical flow predicted pointcloud and the odometry predicted pointcloud instead. 
 				It was significantly noisier, so we used flow residuals for our final method. See the appendix below for details.
 			</p>
-			<div class="video-container">
+			<div class="media-container">
 				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
-					<source src="./videos/kimera/kimera_walk_og.mp4" type="video/mp4">
+					<source src="./videos/prototype/kimera/kimera_walk_og.mp4" type="video/mp4">
 				</video>
 				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
-					<source src="./videos/kimera/walk_masked_pt.mp4" type="video/mp4">
+					<source src="./videos/prototype/kimera/walk_masked_pt.mp4" type="video/mp4">
 				</video>
 			</div>
 			<div class="caption">
@@ -486,7 +490,7 @@
 				dynamic objects and their IDs.
 				Noise is still present, but much of it is filtered out.
 			</p>
-			<div class="video-container">
+			<div class="media-container">
 				<video class='my-video' loop autoplay muted style="width: 800px; max-width: 100%;">
 					<source src="./videos/hamilton.mp4" type="video/mp4">
 				</video>
@@ -830,6 +834,43 @@
 		</div>
 		<div class="main-content-block">
 					<h1>Appendix</h1>
+					<h4>Smoothing and Quadcopter Experiments</h4>
+					While developing the prototype, we noticed rapid changes in pose produced high frequency noise in the flow residuals. 
+					Especially, for quadcopter experiments where video was recorded on a highly dynamic vehicle. 
+					Our first instinct was to design a low-pass filter to smooth the outputs of our pipeline. Thus, our prototype returned a 
+					running average of the flow residuals parametrized by \( \alpha \) as 
+					\[ smoothFlow =  \alpha \cdot Flow + (1 - \alpha) \cdot prevFlow \]
+					As expected of a running average, smoothing mitigated some of the noise, but it also generated a delay between the estimated and ground truth
+					obstacle position. In fact, some smoothing granted a minor performance boost, but it quickly degraded as we over-smoothed the signal and 
+					created a larger gap between the estimate and the actual position. 
+					
+					<img src="./images/prototype/pos_error.png" width=1028px/>
+					<br>
+					<img src="./images/prototype/pos_std.png" width=1028px/>
+					<br>
+
+					This motivated us to pivot from the running average approach. The analysis above was performed on data collected onboard a x500 Holybro Quadcopter. 
+					Below are the flow masks of the flow from the videos recorded by the quadcopter with \(1 - \alpha \) = 0.2 smoothing (left) and  \(1 - \alpha \) = 0.8 smoothing
+					(right). The flashes of white are moments in which the RAFT flow and geometric flow disagree. The attentive viewer will notice that the flashed occur when the 
+					quadcopter rolls. We found this to be a common trend: the signal-to-noise ration decreases as the vehicle performs aggressive maneuvers, particularly, while 
+					performing changes in orientation. Notice, that the video on the right exhibits less flashing, as it is heavily smoothed. This comes at the expensive of a 
+					higher trajectory error as the smoothed estimate lags behind the unprocessed one. Although we developed an improved noise reduction strategy, the noise introduced 
+					in aggressive UAV flights require advanced denoising techniques beyond the scope of this project, so we constrained the remainder of our experiments to ground vehicles. 
+				
+					<br>
+					<div class="media-container">
+						<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
+							<source src="./videos/prototype/flow_unsmoothed.mp4" type="video/mp4">
+						</video>
+						<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
+							<source src="./videos/prototype/flow_smoothed.mp4" type="video/mp4">
+						</video>
+					</div>
+					<br>
+					To estimate the obstacle position we unproject onto 3D space the points in the flow mask, and average those points to obtain the "centroid" of the masked points.
+					We use this centroid as our prediction of the obstacle's position. Clearly, a significant limitation of this approach is that it only works in scenes with at most one dynamic obstacle.  
+					Note these are preliminary results, meant to convey the challenge of handling noisy visual signals during aggressive motion. 
+					Our final implementation, computes the trajectory error by following a more sophisticated procedure outlined in the methods and experiment sections of this blog. 
 					<h4>Using 3D Residuals </h4>
 		</div>
 		<div class="margin-right-block">
