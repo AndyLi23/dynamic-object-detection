@@ -68,7 +68,7 @@
 			max-width: 100%; /* Make sure it fits inside the container */
 			height: auto;
 			display: block;
-			margin: auto;
+			margin: 0;
 	}
 	/* Hide both video displays initially, will display based on JS detection */
   .vid-mobile, .vid-non-mobile { display: none; }
@@ -102,6 +102,7 @@
 	table td, table td * {
 	    vertical-align: middle;
 	    position: relative;
+		padding: 5px 0px;
 	}
 	table.paper-code-tab {
 	    flex-shrink: 0;
@@ -209,6 +210,10 @@
 
 
 
+	thead tr {
+		border-bottom: 2px solid black; /* Makes the line at the bottom of thead thicker */
+	}
+
 </style>
 
 	  <title>FLOROS</title>
@@ -222,7 +227,7 @@
 				<div class="margin-left-block">
 				</div>
 		    <div class="main-content-block">
-						<table class="header" align=left>
+						<table class="header" align=left style="margin: 30px 0px 0px 0px;">
 								<tr>
 									<td colspan=4>
 										<span style="font-size: 32px; font-family: 'Garamond', serif;">Flow Residuals for Open Set dynamic object tracking (FLOROS)</span>
@@ -251,7 +256,7 @@
               <b style="font-size:16px">Outline</b><br><br>
               <a href="#intro">Introduction</a><br><br>
               <a href="#related_works">Related Works</a><br><br>
-              <a href="#methods">Methods</a><br><br>
+              <a href="#methods">Methodology</a><br><br>
               <a href="#experiments">Experiments</a><br><br>
               <a href="#results">Results</a><br><br>
               <a href="#conclusion">Conclusion</a><br><br>
@@ -262,7 +267,8 @@
 				</div>
 		    <div class="main-content-block">
             <!--You can embed an image like this:-->
-            <img src="./images/your_image_here.png" width=512px/>
+			<hr style="margin-bottom: 30px;">
+			<img src="./images/banner1.png" width=100%/>
 		    </div>
 		    <div class="margin-right-block">
 		    </div>
@@ -303,6 +309,7 @@
 				motion blur pollutes the visual signal, which complicates the task of separating agent from obstacle motion. In this project, we propose the use of RAFT optical flow and the optical 
 				flow induced by scene flow to solve both of the aforementioned problems with just a frame camera.
 			</p>
+            <img src="./images/banner.png" width=100%/>
 		    </div>
 		    <div class="margin-right-block">
 		    </div>
@@ -341,8 +348,8 @@
 		<p>
 			<a href="#ref_8">[8]</a> leverages the scene flow induced by a moving camera to produce high-quality camera poses, intrinsics and depth estimates. 
 			We propose reversing the pipeline from <a href="#ref_8">[8]</a>, computing the expected optical flow between two frames given depth data, camera poses, and intrinsics, under the assumption of a static scene. 
-			If there are any non-static objects in the scene, we can subtract the expected optical flow from the RAFT-estimated optical flow, <a href="#ref_9">[9]</a> , to obtain an estimate of the motion of the scene not arising from ego motion.
-			We will develop an algorithm to convert the residuals into a discrete list of moving objects and their masks. We propagate the masks between frames to obtain the tracks for the dynamic obstacles over time. 
+			If there are any non-static objects in the scene, we can subtract the expected optical flow from the RAFT-estimated optical flow, <a href="#ref_9">[9]</a> , to estimate motion in scene not explained by ego movement.
+			We will develop an algorithm to convert the residuals into a discrete list of moving objects and their masks, and will propagate the masks between frames to obtain the tracks for the dynamic obstacles over time. 
 
 		</p>
 		
@@ -355,7 +362,7 @@
 				<div class="margin-left-block">
 				</div>
 		    <div class="main-content-block">
-					<h1>Methods</h1>
+					<h1>Methodology</h1>
 
 			<p>
 				We compute the residuals from RAFT optical flow and the geometric optical flow induced by scene flow, using solely RGBD and odometry data. The latter assumes a static scene, so 
@@ -410,7 +417,7 @@
 	
 				In the video below, RAFT optical flow is juxtaposed with geometric optical flow. 
 				Where the geometric optical flow is white, it cannot be computed because there is no depth data (we capped the
-				max depth at 6.0m, as suggested by Intel).
+				max depth at 6.0m; see <a href="#app1">Appendix I.</a>).
 			</p>
 			<div class="media-container">
 				<video class='my-video' loop autoplay muted style="width: 800px; max-width: 100%;">
@@ -426,7 +433,7 @@
 				Then, the residual (RAFT minus geometric flow) at that pixel is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
 
 				Although we could theoretically recover the depth of \( [u'_{dynamic}, v'_{dynamic}] \) from the depth data for frame 2, in practice, noisy depth data and imperfect
-				pixel associations make this a noisy process. Instead, we assume that the object maintains constant depth between frames (\( \delta_z = 0 \)) and use the residual to only recover \( [\delta_x, \delta_y] \):
+				pixel associations make this a noisy process (see <a href="#app2">Appendix II.</a>). Instead, we assume that the object maintains constant depth between frames (\( \delta_z = 0 \)) and use the residual to only recover \( [\delta_x, \delta_y] \):
 
 				\[ [\delta_x, \delta_y] = p_{2,z} ([u'_{dynamic}, v'_{dynamic}] - [u', v']) \cdot [\frac{1}{f_x}, \frac{1}{f_y}] \] 
 
@@ -442,10 +449,7 @@
 			<p>Below is a video of our prototype of this method running on data from Kimera-Multi, <a href="#ref_10">[10]</a>, where the right image shows flow residual magnitudes masked by the velocity threshold. 
 				To track the motion of dynamic objects across frames we first fed the residuals to the point tracking algorithm from, <a href="#ref_7">[7]</a>.
 				However, this introduces unnecessary computation, as RAFT optical flow is accurate enough to estimate the motion of each obstacle between the current and next frame.
-				The details are discussed below.</p>
-			<p>
-				We also prototyped a method which uses the 3D residual between the optical flow predicted pointcloud and the odometry predicted pointcloud instead. 
-				It was significantly noisier, so we used flow residuals for our final method. See the appendix below for details.
+				The details are discussed below.
 			</p>
 			<div class="media-container">
 				<video class='my-video' loop autoplay muted style="width: 300px; max-width: 50%;">
@@ -549,8 +553,9 @@
 					</ul>
 			</ul>
 
-			* Our robots are ~1.0m in their largest dimension so that seemed like a reasonable threshold. The ground truth data is 
-			also not at the robot center of mass in the robot Z axis. <br><br>
+			* Our robots are ~1.0m in their largest dimension so we used that as a reasonable threshold. The ground truth data is 
+			also not at the robot center of mass in the robot Z axis, creating steady state error. Although far from a perfect 
+			metric, this should be a reasonable estimate and allow us to compare runs with different parameters. <br><br>
 
 
 			We also define the following percentages for ease of comparison:
@@ -568,8 +573,8 @@
 			</div>
 		<div class="main-content-block">
 		<h1>Results</h1>
-		We evaluated our algorithm with different parameters. First, we determined the best RAFT model for our application. Each was run
-		with all other parameters fixed. RAFT options were not touched, besides defining iter=12 for each model.
+		We evaluated the performance of our algorithm when certain parameters are changed, while all others are kept constant. 
+		First, we determined the best RAFT model for our application. RAFT options were not touched, besides defining iter=12 for each model.
 
 		<div class="caption">
 			<span>Table 1. RAFT model comparison</span>
@@ -635,7 +640,7 @@
 		Subsequent evaluations were run with the raft-sintel model.
 		<br><br>
 		We then evaluated the effect of framerate on our algorithm. The original RGBD data was recorded at 30Hz,
-		but we downsampled it to 15, 10, and 6Hz and ran the algorithm with other parameters fixed. The results are shown below.
+		but we downsampled it to 15, 10, and 6Hz.
 		
 		<div class="caption">
 			<span>Table 2. Framerate comparison</span>
@@ -657,11 +662,11 @@
 				<tr>
 					<td><strong>15Hz</strong></td>
 					<td>1283</td>
-					<td>1086</td>
-					<td>1380</td>
-					<td>1111</td>
-					<td><strong>84.65%</strong></td>
-					<td>19.49%</td>
+					<td>1088</td>
+					<td>1384</td>
+					<td>1114</td>
+					<td><strong>84.80%</strong></td>
+					<td>19.51%</td>
 				</tr>
 			</tbody>
 			<tbody>
@@ -692,10 +697,11 @@
 		detection of dynamic objects. Therefore, we ran all other evaluations at 15Hz.
 
 		<br><br>
-		We then evaluated the effect of various noise-reduction methods. 
+		We then evaluated the effect of various noise-reduction methods by performing ablations on various 
+		parameters of the algorithm.
 
 		<div class="caption">
-			<span>Table 2. Noise reduction comparison</span>
+			<span>Table 3. Noise reduction comparison</span>
 		</div>
 
 		<table border="1" style="width:100%; text-align:center; border-collapse:collapse;">
@@ -712,7 +718,7 @@
 			</thead>
 			<tbody>
 				<tr>
-					<td>Original</td>
+					<td><strong>Original</strong></td>
 					<td>1283</td>
 					<td>1088</td>
 					<td>1384</td>
@@ -734,7 +740,7 @@
 			</tbody>
 			<tbody>
 				<tr>
-					<td>No axial variance-based discarding</td>
+					<td>No axial variance-based threshold</td>
 					<td>1283</td>
 					<td>1119</td>
 					<td>1662</td>
@@ -757,8 +763,60 @@
 		</table>
 		<br>
 		We find that morphological operations are very effective at removing noise from the mask. Variance-based discarding 
-		and depth-based velocity threshold gain also have some effect. Variance-based discarding and morphological operations 
+		and depth-based velocity threshold gain also have some effect. Variance-based thresholding and morphological operations 
 		somewhat reduce the detection rate, but the reduction in false positives is more significant.
+
+		<br><br>
+
+		To further reduce false positives, we evaluated the effect of requiring that a dynamic object 
+		be detected in two consecutive frames before being considered a dynamic object.
+
+		<div class="caption">
+			<span>Table 4. Using 3D residuals</span>
+		</div>
+
+		<table border="1" style="width:100%; text-align:center; border-collapse:collapse;">
+			<thead>
+				<tr>
+					<th>Method</th>
+					<th>\( N_{gt} \)</th>
+					<th>\( N_{det} \)</th>
+					<th>\( N \)</th>
+					<th>\( N_{corr} \)</th>
+					<th>\( det\% \)</th>
+					<th>\( fp\% \)</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>Original</td>
+					<td>1283</td>
+					<td>1088</td>
+					<td>1384</td>
+					<td>1114</td>
+					<td><strong>84.80%</strong></td>
+					<td>19.51%</td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td><strong>2-Consecutive Requirement</strong></td>
+					<td>1283</td>
+					<td>1080</td>
+					<td>1224</td>
+					<td>1093</td>
+					<td>84.18%</td>
+					<td><strong>10.70%</strong></td>
+				</tr>
+			</tbody>
+		</table>
+		<br>
+
+		This change halved the number of false positives and barely decreased the detection rate, though we did not 
+		include it in the default algorithm used for the other evaluations, since we did not want to influence results 
+		by relying on the probabilistic assumption that noise is independent between frames.
+
+		<br><br>
 
 		</div>
 		<div class="margin-right-block">
@@ -777,12 +835,13 @@
 						would better leverage all the available data. 
 						<br><br>
 						A planned extension to this work is to use LiDAR as the source for depth data. This would greatly increase the range and accuracy of depth data, at
-						the cost of sparsity (which could be addressed with stereo camera-LiDAR fusion). In addition, it may allow us to use the 3D residual method discussed in the appendix,
+						the cost of sparsity (which could be addressed with stereo camera-LiDAR fusion). In addition, it may allow us to use the 3D residual method discussed in Appendix I.,
 						which can better detect movement in the camera Z axis.
 						<br><br>
 						A major limitation of this method is that under high accelerations, the RAFT and geometric flow significantly diverge, leading to underwhelming results during UAV flights. 
-						This might be attributed to RAFT not generalizing well to high speed camera motion. Performing transfer learning on RAFT  with labeled high speed flight data 
-						is a promising direction of future work. 
+						There are multiple cuprits, including noisy depth data and poor RAFT results at high accelerations. The most likely reason seems to be odometry,
+						since the divergence often occurs during accelerating, suggesting latency and/or noise in the odometry data. Also, since pose data is collected at independent 
+						times to the RGBD data, we must perform linear interpolation to approximate it every frame, which introduces additional error.
 						<br><br>
 						Despite these shortcomings, our method proves to be a promising approach to the problem of dynamic obstacle tracking. With only odometry and depth camera data, 
 						it demonstrates good performance and runtime on real-world data in the tested environments. There appear to be many directions for further work to
@@ -797,6 +856,7 @@
 				</div>
 		    <div class="main-content-block">
 						<div class='citation' id="references" style="height:auto"><br>
+							<hr style="margin-bottom: 30px">
 							<h1>References</h1>
 							<a id="ref_1"></a>[1] <a href="https://ieeexplore.ieee.org/abstract/document/8968021">Tordesillas, J., Lopez, B. T., & How, J. P. (2019, November). Faster: Fast and safe trajectory planner for flights in unknown environments. In 2019 IEEE/RSJ international conference on intelligent robots and systems (IROS) (pp. 1934-1940). IEEE.</a><br><br>
 							<a id="ref_2"></a>[2] <a href="https://ieeexplore.ieee.org/abstract/document/9490372	">Tordesillas, J., & How, J. P. (2021). MADER: Trajectory planner in multiagent and dynamic environments. IEEE Transactions on Robotics, 38(1), 463-476.</a><br><br>
@@ -820,6 +880,7 @@
 				<div class="margin-left-block">
 				</div>
 		    <div class="main-content-block">
+						<hr style="margin-bottom: 30px">
 						<h1>Codebase</h1>
 						<p>See <a href="https://github.com/AndyLi23/dynamic-object-detection" target="_blank">dynamic-object-detection on Github</a> for our final implementation code. 
 							Instrutions for downloading our data and running the algorithm and evaluations are in the README. </p>
@@ -872,6 +933,145 @@
 					Note these are preliminary results, meant to convey the challenge of handling noisy visual signals during aggressive motion. 
 					Our final implementation, computes the trajectory error by following a more sophisticated procedure outlined in the methods and experiment sections of this blog. 
 					<h4>Using 3D Residuals </h4>
+					<h4 id="app1">I. Using 3D Residuals </h4>
+
+					Because we have the depth data for both frame 1 and frame 2, in theory we can compute the full 3D movement 
+					of each pixel between frames.
+					Given RAFT flow \( [\delta u_{raft}, \delta v_{raft}] \) at pixel \( [u, v] \), we can compute the 3D residual as follows:
+					\[ p_2 = (T_{odom}^{cam})^{-1} \cdot T_{r2}^{r1} \cdot T_{odom}^{cam} \cdot [p_1^T \dots 1]^T + [u_{raft}, v_{raft}, 0]^T \]
+					\[ p_{2, raft} = d_2 K^{-1} [u + \delta u_{raft}, v + \delta v_{raft}, 1]^T \]
+					\[ \delta \approx p_{2, raft} - p_2 \]
+
+					where \( d_2 \) is the depth of pixel \( [u + \delta u_{raft}, v + \delta v_{raft}] \) in frame 2. This method works by 
+					assuming that RAFT correctly predicts pixel correspondences, in which case the 3D point corresponding to pixel 
+					\( [u + \delta u_{raft}, v + \delta v_{raft}] \) in frame 2 is the same as the 3D point corresponding to pixel \( [u, v] \) in frame 1.
+					Since \( p_2 \) accounts for the camera motion between frames but not motion of the point itself while RAFT accounts
+					for both, the difference is the approximate 3D motion of the point between frames.
+					<br><br>
+					Unfortunately, this method is not effective in practice. The RAFT flow is not accurate enough, 
+					and noise in the depth data is amplified by the projection into 3D. We ran our evaluation with the 3D 
+					residual method and found that it decreased the detection rate and dramatically increased the 
+					number of false positives, mostly patches of depth noise at larger depths.
+
+					<div class="caption">
+						<span>Table 4. Using 3D residuals</span>
+					</div>
+			
+					<table border="1" style="width:100%; text-align:center; border-collapse:collapse;">
+						<thead>
+							<tr>
+								<th>Method</th>
+								<th>\( N_{gt} \)</th>
+								<th>\( N_{det} \)</th>
+								<th>\( N \)</th>
+								<th>\( N_{corr} \)</th>
+								<th>\( det\% \)</th>
+								<th>\( fp\% \)</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><strong>Original</strong></td>
+								<td>1283</td>
+								<td>1088</td>
+								<td>1384</td>
+								<td>1114</td>
+								<td>84.80%</td>
+								<td><strong>19.51%</strong></td>
+							</tr>
+						</tbody>
+						<tbody>
+							<tr>
+								<td>3D residual</td>
+								<td>1283</td>
+								<td>939</td>
+								<td>35857</td>
+								<td>1400</td>
+								<td>73.19%</td>
+								<td><strong>96.10%</strong></td>
+							</tr>
+						</tbody>
+					</table>
+					<br>
+
+					<h4 id="app2">II. Max Depth Limits</h4>
+
+					We later compared performances at different maximum depth limits (all other parameters fixed).
+
+					<div class="caption">
+						<span>Table 5. Depth limit comparison</span>
+					</div>
+			
+
+					<table border="1" style="width:100%; text-align:center; border-collapse:collapse;">
+						<thead>
+							<tr>
+								<th>Depth Limit (m)</th>
+								<th>\( N_{gt} \)</th>
+								<th>\( N_{det} \)</th>
+								<th>\( N \)</th>
+								<th>\( N_{corr} \)</th>
+								<th>\( det\% \)</th>
+								<th>\( fp\% \)</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><strong>6.0</strong></td>
+								<td>1283</td>
+								<td>1088</td>
+								<td>1384</td>
+								<td>1114</td>
+								<td><strong>84.80%</strong></td>
+								<td>19.51%</td>
+							</tr>
+						</tbody>
+						<tbody>
+							<tr>
+								<td>7.5</td>
+								<td>1306</td>
+								<td>1087</td>
+								<td>1434</td>
+								<td>1113</td>
+								<td>83.23%</td>
+								<td>22.38%</td>
+							</tr>
+						</tbody>
+						<tbody>
+							<tr>
+								<td>10.0</td>
+								<td>1306</td>
+								<td>1049</td>
+								<td>1317</td>
+								<td>1075</td>
+								<td>80.32%</td>
+								<td>28.82%</td>
+							</tr>
+						</tbody>
+						<tbody>
+							<tr>
+								<td>15.0</td>
+								<td>1306</td>
+								<td>1042</td>
+								<td>1288</td>
+								<td>1068</td>
+								<td>79.79%</td>
+								<td><strong>17.08%</strong></td>
+							</tr>
+						</tbody>
+					</table>
+					<br>
+					As the maximum depth limit increases, the number of dynamic objects according to the ground truth 
+					does not significantly increase (possibly due to the depth-based velocity threshold gain). The 
+					detection rate decreases with increased depth limit.
+					<br><br>
+					We looked at the output videos and found that 15.0m decreased the false positive rate because it 
+					brought the walls into range of the depth data,
+					so odometry errors caused larger portions of the image to be masked, which were then pruned by the 
+					axis variance threshold. However, this is not a generalizable phenomenon. Therefore, we decided to 
+					continue using the 6.0m limit suggested by Intel, as any depth beyond that is guaranteed to be noisy. 
+					<br><br>
+
 		</div>
 		<div class="margin-right-block">
 		</div>

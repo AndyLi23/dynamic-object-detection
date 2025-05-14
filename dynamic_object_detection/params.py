@@ -136,6 +136,7 @@ class TrackingParams:
     post_processing: list = field(default_factory=list)
     min_3d_std_dev: float = None
     max_3d_std_dev: float = None
+    min_consecutive_frames: int = 1
 
     @classmethod
     def from_dict(cls, params_dict):
