@@ -252,8 +252,8 @@
 		<div class="content-margin-container" id="intro">
 				<div class="margin-left-block">
           <!-- table of contents here -->
-          <div style="position:fixed; max-width:inherit; top:max(20%,120px)">
-              <b style="font-size:16px">Outline</b><br><br>
+          <div style="position:fixed; max-width:inherit; top:max(20%,120px); font-size:16px; border: none;">
+              <b style="font-size:18px">Outline</b><br><br>
               <a href="#intro">Introduction</a><br><br>
               <a href="#related_works">Related Works</a><br><br>
               <a href="#methods">Methodology</a><br><br>
@@ -566,9 +566,9 @@
 					</ul>
 			</ul>
 
-			* Our robots are ~1.0m in their largest dimension, so we used that as a reasonable threshold. The ground truth data is 
-			also not aligned with the robot center of mass in the robot Z axis, creating steady state error. Although far from a perfect 
-			metric, this should be a reasonable estimate and allow us to compare runs with different parameters. <br><br>
+			<i>* Our robots are ~1.0m in their largest dimension, so we used that as a reasonable threshold. The ground truth data is 
+			not aligned with the robot center of mass in the robot Z axis, creating steady state error. Although far from a perfect 
+			metric, this should be a reasonable estimate and allow us to compare runs with different parameters.</i> <br><br>
 
 
 			We also define the following percentages for ease of comparison:
@@ -764,7 +764,7 @@
 			</tbody>
 			<tbody>
 				<tr>
-					<td>No depth-based velocity threshold gain</td>
+					<td>No depth-based velocity threshold gain*</td>
 					<td>1318</td>
 					<td>1097</td>
 					<td>1605</td>
@@ -775,6 +775,10 @@
 			</tbody>
 		</table>
 		<br>
+		<i>* We set the fixed velocity threshold 
+		to 0.775 (0.4 + 0.125 * 3) for this run. This was previously the average velocity threshold in our depth range (6m),
+		since the original parameters were 0.4 for the minimum velocity threshold and 0.125 for the depth-based gain.</i>
+		<br><br>
 		We find that morphological operations are very effective at removing noise from the mask. Variance-based discarding 
 		and depth-based velocity threshold gain also have some effect. Variance-based thresholding and morphological operations 
 		somewhat reduce the detection rate, but the reduction in false positives is more significant.
