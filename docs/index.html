@@ -396,21 +396,13 @@
 				\[ [u', v'] = [f_x \frac{p_{2,x}}{p_{2,z}} + c_x, f_y \frac{p_{2,y}}{p_{2,z}} + c_y] \]
 				Where \( f_x, f_y \) are the focal lengths of the camera and \( c_x, c_y \) are the coordinates of the camera center in the image plane.
 
-<<<<<<< HEAD
-				The (@Andy shouldn't this be flipped?) \( [u, v] - [u', v'] \) gives us the geometric optical flow at \( [u, v] \) in frame 1.
-=======
 				The \( [u', v'] - [u, v] \) gives us the geometric optical flow at \( [u, v] \) in frame 1.
->>>>>>> b30f20fe37a9a105a59b9e65013b3cb8506bd1e9
 
 				The key observation is the assumption that \( p_1 \) is static in the 3D scene. If \( p_1 \) moves \( \delta = [\delta_x, \delta_y, \delta_z] \) (in the camera reference frame at frame 2) 
 				between frame 1 and frame 2, we get the following image projection at frame 2:
 
 				\[ [u'_{dynamic}, v'_{dynamic}] = [f_x \frac{p_{2,x} + \delta_x}{p_{2,z} + \delta_z} + c_x, f_y \frac{p_{2,y} + \delta_y}{p_{2,z} + \delta_z} + c_y] \]
 
-<<<<<<< HEAD
-				Then the geometric optical flow at \( [u, v] \) in frame 1 is (@Andy, isn't this the residual?) \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
-
-=======
 				Then the geometric optical flow at \( [u, v] \) in frame 1 is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
 				<br><br></bre>
 				In the video below, RAFT optical flow is juxtaposed with geometric optical flow. 
@@ -426,7 +418,7 @@
 				<span>Figure 1. Clockwise from top left: RGB image, depth image, <br>geometric optical flow, RAFT flow</span>
 			</div>
 			<p>
->>>>>>> b30f20fe37a9a105a59b9e65013b3cb8506bd1e9
+
 				Since RAFT estimates the actual observed optical flow from frame 1 to frame 2, it will return an optical flow close to \( [u'_{dynamic}, v'_{dynamic}] - [u, v] \) at \( [u, v] \).
 				Then, the residual (RAFT minus geometric flow) at that pixel is \( [u'_{dynamic}, v'_{dynamic}] - [u', v'] \).
 
