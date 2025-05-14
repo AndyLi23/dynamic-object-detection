@@ -171,8 +171,9 @@ class DynamicObjectTracker:
     def return_objects(self):
         frame_object_list = [[] for _ in range(self.cur_frame)]
         for obj in self.all_objects.values():
-            for point, frame in zip(obj.points_list, obj.frames):
-                frame_object_list[frame].append({'id': obj.id, 'point': point})
+            if len(obj.points_list) >= self.params.min_consecutive_frames:
+                for point, frame in zip(obj.points_list, obj.frames):
+                    frame_object_list[frame].append({'id': obj.id, 'point': point})
         return frame_object_list
 
     

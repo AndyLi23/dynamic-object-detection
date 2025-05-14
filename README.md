@@ -1,5 +1,8 @@
 # dynamic-object-detection
-For 6.8300 sp25
+
+#### MIT 6.8300 Spring 2025 Final Project
+
+### Website: https://andyli23.github.io/dynamic-object-detection/
 
 #### Dependencies
 
