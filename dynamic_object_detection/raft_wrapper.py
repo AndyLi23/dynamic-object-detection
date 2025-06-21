@@ -2,7 +2,6 @@ import sys
 import torch
 from params import RaftParams
 import torchvision.transforms as T
-import numpy as np
 
 class RaftWrapper:
     def __init__(self, raft_params: RaftParams, device):

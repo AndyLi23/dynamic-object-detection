@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 import cv2 as cv
-import os
 import torch
 
 def global_nearest_neighbor(data1: list, data2: list, cost_fn: callable, max_cost: float=None):

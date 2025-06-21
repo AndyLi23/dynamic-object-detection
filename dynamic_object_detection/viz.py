@@ -1,10 +1,8 @@
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import cv2 as cv
 from tqdm import tqdm
 from itertools import product
-import gc
 import pickle
 import random
 import open3d as o3d

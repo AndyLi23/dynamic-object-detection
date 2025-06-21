@@ -1,9 +1,10 @@
 import argparse
-from params import Params
-from raft_wrapper import RaftWrapper
-from viz import OpticalFlowVisualizer
-from flow import GeometricOpticalFlow
-from tracker import DynamicObjectTracker
+from dynamic_object_detection.params import Params
+from dynamic_object_detection.raft_wrapper import RaftWrapper
+from dynamic_object_detection.viz import OpticalFlowVisualizer
+from dynamic_object_detection.flow import GeometricOpticalFlow
+from dynamic_object_detection.tracker import DynamicObjectTracker
+from dynamic_object_detection.dod_util import copy_params_file, preprocess_depth, compute_relative_poses
 import numpy as np
 from tqdm import tqdm
 import os
@@ -11,7 +12,6 @@ import torch
 import gc
 import time
 import pickle
-from dynamic_object_detection.dod_util import copy_params_file, preprocess_depth, compute_relative_poses
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)

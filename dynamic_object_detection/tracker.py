@@ -1,8 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-from dynamic_object_detection.dod_util import global_nearest_neighbor, remove_nan_points, transform_points
-import pickle
+from dynamic_object_detection.dod_util import global_nearest_neighbor, remove_nan_points
 from scipy.ndimage import label
 
 OVERLAY = np.array([0, 0, 255], dtype=np.uint8)

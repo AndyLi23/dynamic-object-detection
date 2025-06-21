@@ -8,7 +8,7 @@
 
 ```
 sudo apt-get install ffmpeg x264 libx264-dev
-git clone https://github.com/mbpeterson70/robotdatapy && cd robotdatapy && pip install .
+git clone https://github.com/mbpeterson70/robotdatapy && cd robotdatapy && pip install . && cd ..
 pip install -e .
 ```
 
@@ -26,7 +26,7 @@ To run the evaluation data in our blog, download the following rosbags:
 ```
 export BAG_PATH=/path/to/hamilton_data.bag
 export RAFT=/path/to/dynamic-object-detection/RAFT/
-python3 dynamic_object_detection/main.py -p config/hamilton.yaml
+python3 dynamic_object_detection/offline.py -p config/hamilton.yaml
 ```
 Edit `config/hamilton.yaml` to experiment with different parameters.
 
