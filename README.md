@@ -4,6 +4,10 @@
 
 ### Website: https://andyli23.github.io/dynamic-object-detection/
 
+Using residuals between RAFT predicted optical flow and ego motion-induced geometric optical flow to detect moving objects from a mobile platform.
+
+https://github.com/user-attachments/assets/0100457d-c09d-4f91-9d25-a054e7a9ddd3
+
 #### Dependencies
 
 ```
